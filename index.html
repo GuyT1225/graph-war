@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Graph War V0.3</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef3f7;color:#1d2939;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}main{max-width:900px;margin:auto;padding:14px}.small{font-size:13px;color:#667085}.paper{background:#fbfdff;background-image:linear-gradient(rgba(78,145,194,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(78,145,194,.16) 1px,transparent 1px);background-size:20px 20px;border:1px solid #bdd2e5;border-radius:14px;padding:14px;margin-top:12px}.row{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.btn{min-height:44px;padding:10px 14px;border:1px solid #bcc9d7;border-radius:10px;background:#fff;font-size:16px;font-weight:600}.primary{background:#dbeafe;border-color:#7da6e8}.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:1px;margin-top:12px}.cell{aspect-ratio:1;border:1px solid rgba(80,140,190,.24);background:rgba(255,255,255,.62);display:flex;align-items:center;justify-content:center;padding:0}.ship{background:rgba(49,59,70,.22)}.hit{font-weight:900}.miss{color:#667085}.target{outline:3px solid #2f6feb;outline-offset:-3px}.hidden{display:none!important}.fronts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.front{padding:12px;border:1px solid #ccd6e0;border-radius:10px;background:#fff}.active{background:#eef5ff;border-color:#7da6e8}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pill{border:1px solid #ccd6e0;border-radius:999px;padding:5px 9px;background:#fff;font-size:12px}.log{font-size:14px;max-height:220px;overflow:auto}.log div{padding:3px 0;border-bottom:1px solid #eef2f6}@media(max-width:700px){.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main>
+<h1>Graph War <span class="small">V0.3</span></h1>
+<div class="small">Four fronts · separate intel · simultaneous volleys · 1 human + 3 bots</div>
+
+<section id="setup" class="paper">
+<div class="row"><strong>West Front — You</strong><span class="pill">10×10 · fleet 5/4/3/3/2</span></div>
+<div id="setupGrid" class="grid"></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button id="randomize" class="btn">Randomize Fleet</button><button id="start" class="btn primary">Start Battle</button></div>
+</section>
+
+<section id="game" class="hidden">
+<div class="row" style="margin-top:12px"><div><span class="small">ROUND <span id="round">1</span></span><br><strong>Choose a front and coordinate</strong></div><span id="status" class="pill">PLANNING</span></div>
+<div class="fronts">
+<button class="front active" data-front="North">NORTH<br><span class="small nships">5 ships</span></button>
+<button class="front" data-front="East">EAST<br><span class="small eships">5 ships</span></button>
+<button class="front" data-front="South">SOUTH<br><span class="small sships">5 ships</span></button>
+<div class="front">WEST — YOU<br><span id="wships" class="small">5 ships</span></div>
+</div>
+<div class="two">
+<div class="paper">
+<div class="row"><div><strong id="intelTitle">North Front — Your Intel</strong><div class="small">Only your shots appear here.</div></div><span id="enemyCount" class="pill">5 ships</span></div>
+<div id="enemyGrid" class="grid"></div>
+<button id="lock" class="btn primary" style="width:100%;margin-top:12px" disabled>Lock Orders</button>
+</div>
+<div class="paper">
+<div class="row"><strong>West Front — Your Fleet</strong><span id="myCount" class="pill">5 ships</span></div>
+<div id="myGrid" class="grid"></div>
+</div>
+</div>
+<div class="paper"><div class="row"><strong>Volley Log</strong><button id="restart" class="btn">Restart</button></div><div id="log" class="log"></div></div>
+</section>
+</main>
+<script>
+(function(){
+var SIZE=10,LENS=[5,4,3,3,2],NAMES=["North","East","South","West"],fronts={},intel={},enemy="North",selected=null,round=1,ended=false;
+function id(x){return document.getElementById(x)}function k(r,c){return r+","+c}
+function coord(x){var p=x.split(","),r=+p[0],c=+p[1];return String.fromCharCode(65+c)+(r+1)}
+function newBoard(){return{ships:[],shots:{},alive:true}}
+function fleet(){var b=newBoard();for(var q=0;q<LENS.length;q++){var len=LENS[q],ok=false;while(!ok){var h=Math.random()<.5,r=h?Math.floor(Math.random()*SIZE):Math.floor(Math.random()*(SIZE-len+1)),c=h?Math.floor(Math.random()*(SIZE-len+1)):Math.floor(Math.random()*SIZE),cells=[];for(var i=0;i<len;i++)cells.push(k(r+(h?0:i),c+(h?i:0)));ok=true;for(var s=0;s<b.ships.length;s++)for(var j=0;j<b.ships[s].cells.length;j++)if(cells.indexOf(b.ships[s].cells[j])>=0)ok=false;if(ok)b.ships.push({cells:cells,hits:{},sunk:false})}}return b}
+function reset(){fronts={North:fleet(),East:fleet(),South:fleet(),West:fleet()};intel={North:{},East:{},South:{}};enemy="North";selected=null;round=1;ended=false}
+function shipAt(b,x){for(var i=0;i<b.ships.length;i++)if(b.ships[i].cells.indexOf(x)>=0)return b.ships[i];return null}
+function left(b){var n=0;for(var i=0;i<b.ships.length;i++)if(!b.ships[i].sunk)n++;return n}
+function fire(b,x){if(b.shots[x])return null;var s=shipAt(b,x);b.shots[x]=s?"hit":"miss";if(!s)return{hit:false,sunk:false};s.hits[x]=1;var sunk=true;for(var i=0;i<s.cells.length;i++)if(!s.hits[s.cells[i]])sunk=false;if(sunk)s.sunk=true;if(left(b)===0)b.alive=false;return{hit:true,sunk:sunk}}
+function randCell(b){var a=[];for(var r=0;r<SIZE;r++)for(var c=0;c<SIZE;c++){var x=k(r,c);if(!b.shots[x])a.push(x)}return a[Math.floor(Math.random()*a.length)]}
+function botOrder(bot){var a=[];for(var i=0;i<NAMES.length;i++)if(NAMES[i]!==bot&&fronts[NAMES[i]].alive)a.push(NAMES[i]);if(!a.length)return null;var t=a[Math.floor(Math.random()*a.length)];return{a:bot,t:t,x:randCell(fronts[t])}}
+function drawOwn(el,b){el.innerHTML="";for(var r=0;r<SIZE;r++)for(var c=0;c<SIZE;c++){var x=k(r,c),d=document.createElement("div");d.className="cell";if(shipAt(b,x))d.className+=" ship";if(b.shots[x]==="hit"){d.textContent="✕";d.className+=" hit"}else if(b.shots[x]==="miss"){d.textContent="○";d.className+=" miss"}el.appendChild(d)}}
+function choose(e){selected=e.currentTarget.getAttribute("data-cell");render()}
+function drawEnemy(){var el=id("enemyGrid"),seen=intel[enemy];el.innerHTML="";for(var r=0;r<SIZE;r++)for(var c=0;c<SIZE;c++){var x=k(r,c),b=document.createElement("button");b.className="cell";b.setAttribute("data-cell",x);if(seen[x]==="hit"){b.textContent="✕";b.className+=" hit"}else if(seen[x]==="miss"){b.textContent="○";b.className+=" miss"}if(selected===x)b.className+=" target";b.disabled=ended||!!seen[x]||!fronts[enemy].alive;if(!b.disabled)b.addEventListener("click",choose);el.appendChild(b)}}
+function log(t){var d=document.createElement("div");d.textContent=t;id("log").prepend(d)}
+function render(){id("round").textContent=round;id("intelTitle").textContent=enemy+" Front — Your Intel";id("enemyCount").textContent=left(fronts[enemy])+" ships";id("myCount").textContent=left(fronts.West)+" ships";id("wships").textContent=left(fronts.West)+" ships";document.querySelector(".nships").textContent=left(fronts.North)+" ships";document.querySelector(".eships").textContent=left(fronts.East)+" ships";document.querySelector(".sships").textContent=left(fronts.South)+" ships";id("lock").disabled=!selected||ended;id("status").textContent=ended?"BATTLE ENDED":"PLANNING";drawEnemy();drawOwn(id("myGrid"),fronts.West);var bs=document.querySelectorAll("[data-front]");for(var i=0;i<bs.length;i++){var n=bs[i].getAttribute("data-front");bs[i].className=n===enemy?"front active":"front";bs[i].disabled=!fronts[n].alive||ended}}
+function resolve(){if(!selected||ended)return;var orders=[{a:"West",t:enemy,x:selected}],bots=["North","East","South"];for(var i=0;i<bots.length;i++)if(fronts[bots[i]].alive){var o=botOrder(bots[i]);if(o)orders.push(o)}log("— VOLLEY "+round+" —");for(i=0;i<orders.length;i++){o=orders[i];if(!fronts[o.a].alive||!fronts[o.t].alive)continue;var res=fire(fronts[o.t],o.x);if(!res)continue;if(o.a==="West")intel[o.t][o.x]=res.hit?"hit":"miss";log(o.a+" → "+o.t+" "+coord(o.x)+" "+(res.hit?"HIT":"MISS")+(res.sunk?" · SHIP SUNK":""))}var alive=NAMES.filter(function(n){return fronts[n].alive});if(!fronts.West.alive){ended=true;log("WEST FRONT ELIMINATED")}else if(alive.length<=1){ended=true;log(alive[0]+" WINS")}round++;selected=null;if(!fronts[enemy].alive){var next=["North","East","South"].filter(function(n){return fronts[n].alive});if(next.length)enemy=next[0]}render()}
+reset();drawOwn(id("setupGrid"),fronts.West);
+id("randomize").onclick=function(){fronts.West=fleet();drawOwn(id("setupGrid"),fronts.West)};
+id("start").onclick=function(){id("setup").className="hidden";id("game").className="";id("log").innerHTML="";log("Battle started. You command West.");render()};
+id("lock").onclick=resolve;id("restart").onclick=function(){reset();id("game").className="hidden";id("setup").className="paper";drawOwn(id("setupGrid"),fronts.West)};
+var fb=document.querySelectorAll("[data-front]");for(var z=0;z<fb.length;z++)fb[z].onclick=function(){enemy=this.getAttribute("data-front");selected=null;render()};
+})();
+</script>
+</body></html>
