@@ -3,260 +3,480 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.9 — 2.5D Environment Test</title>
+<title>Graph War V0.9.1 — 2.5D Readability Fix</title>
 <style>
 :root{
-  --page:#dfe7eb;--paper:#f7f1e4;--ink:#163a61;--ink2:#496f95;--red:#aa3f36;
-  --muted:#72776f;--line:#c4b79a;--panel:#f7f1e4;--btn:#edf4f7
+  --page:#dce5ea;--panel:#fffaf0;--paper:#f7f1e4;--ink:#12375d;--ink2:#385f86;
+  --red:#a33831;--muted:#58636b;--line:#b9ad92;--button:#eaf2f7
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--page);color:#263747;font-family:"Courier New",monospace;transition:.25s background}
+html,body{margin:0;min-height:100%;background:var(--page);color:#20313f;font-family:Arial,Helvetica,sans-serif}
 button,input,select{font:inherit}
-main{max-width:1380px;margin:auto;padding:12px}
-h1{margin:0;color:var(--ink);font-size:32px;letter-spacing:-1.4px}
-.sub{font-size:12px;color:var(--muted);margin:3px 0 10px}
-.paper{background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 12px rgba(50,40,30,.08)}
-.topbar{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-bottom:10px}
-.themebox{display:flex;gap:8px;align-items:center;font-size:10px;color:var(--ink)}
-.themebox select{border:1px solid var(--ink2);background:var(--panel);color:var(--ink);padding:6px 8px;border-radius:4px}
-.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px}
-.stage{position:relative;min-height:760px;overflow:hidden;background:var(--paper)}
-#scene{display:block;width:100%;height:760px}
-.hudstrip{position:absolute;left:14px;top:12px;right:14px;display:flex;justify-content:space-between;pointer-events:none;font-size:11px;color:var(--ink)}
-.hudstrip b{font-size:12px}
-.callout{position:absolute;left:50%;top:14%;transform:translateX(-50%) rotate(-1deg);font-weight:700;font-size:30px;color:var(--red);text-shadow:0 2px 0 var(--paper);opacity:0;pointer-events:none}
+main{max-width:1420px;margin:auto;padding:14px}
+.top{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:12px}
+h1{margin:0;color:var(--ink);font:700 34px/1 "Courier New",monospace;letter-spacing:-1.3px}
+.version{font-size:13px;font-weight:400}
+.sub{margin-top:6px;color:var(--muted);font-size:15px;line-height:1.4}
+.theme{display:flex;align-items:center;gap:8px;color:var(--ink);font-weight:700;font-size:14px}
+.theme select{padding:8px 10px;border:2px solid var(--ink2);border-radius:6px;background:var(--panel);color:var(--ink)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px}
+.stage{position:relative;min-height:720px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--paper);box-shadow:0 5px 16px rgba(30,40,48,.10)}
+#scene{display:block;width:100%;height:720px}
+.hud{position:absolute;inset:14px 16px auto 16px;display:flex;justify-content:space-between;gap:12px;pointer-events:none;color:var(--ink);font:700 14px/1.35 "Courier New",monospace;text-shadow:0 1px 0 var(--paper)}
+.hud span{font-weight:400;color:var(--muted)}
+.callout{position:absolute;left:50%;top:14%;transform:translateX(-50%);font:700 34px/1 "Courier New",monospace;color:var(--red);text-shadow:0 2px 0 var(--paper);opacity:0;pointer-events:none}
 .callout.show{animation:pop .9s ease-out}
-@keyframes pop{0%{opacity:0;transform:translateX(-50%) scale(.8) rotate(-2deg)}15%{opacity:1;transform:translateX(-50%) scale(1.08) rotate(-1deg)}70%{opacity:1}100%{opacity:0}}
-.panel{padding:14px}
-.panel h2{margin:0 0 4px;color:var(--ink);font-size:16px}
-.kicker{font-size:10px;color:var(--red);font-weight:700;margin-bottom:12px}
-.control{margin:13px 0}
-label{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--ink)}
-input[type=range]{width:100%}
-.fire{width:100%;min-height:48px;border:2px solid var(--ink);background:var(--btn);color:var(--ink);font-weight:700;border-radius:4px;cursor:pointer}
+@keyframes pop{0%{opacity:0;transform:translateX(-50%) scale(.8)}15%{opacity:1;transform:translateX(-50%) scale(1.08)}70%{opacity:1}100%{opacity:0}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;box-shadow:0 5px 16px rgba(30,40,48,.08)}
+.panel h2{margin:0;color:var(--ink);font:700 20px/1.1 "Courier New",monospace}
+.kicker{margin:6px 0 18px;color:var(--red);font-weight:700;font-size:14px}
+.control{margin:18px 0}
+label{display:flex;justify-content:space-between;color:var(--ink);font-weight:700;font-size:15px;margin-bottom:7px}
+input[type=range]{width:100%;height:30px}
+.fire{width:100%;min-height:54px;border:2px solid var(--ink);border-radius:7px;background:var(--button);color:var(--ink);font-weight:800;font-size:17px;cursor:pointer}
 .fire:disabled{opacity:.45}
-.readout{font-size:10px;line-height:1.75;border-top:1px dashed var(--line);padding-top:10px;margin-top:10px}
-.status{margin-top:12px;padding:10px;border-top:2px solid var(--red);color:var(--red);font-weight:700;text-align:center;background:rgba(255,255,255,.25);min-height:52px;font-size:11px}
-.note{font-size:10px;line-height:1.45;color:var(--muted);margin-top:10px}
-.legend{margin-top:12px;border-top:1px dashed var(--line);padding-top:8px;font-size:9px;color:var(--ink2);line-height:1.55}
-body.blueprint{--page:#081827;--paper:#0d2940;--panel:#102f48;--ink:#8ed8ff;--ink2:#4db6e8;--red:#ff756e;--muted:#8cb3c7;--line:#285979;--btn:#123b5b}
-body.warroom{--page:#4c5143;--paper:#d8d2b8;--panel:#d6cfb3;--ink:#263625;--ink2:#53664f;--red:#8b342e;--muted:#676b5e;--line:#8f8b73;--btn:#c9c3a8}
-@media(max-width:840px){
-  .topbar{grid-template-columns:1fr}.layout{grid-template-columns:1fr}.stage{min-height:590px}#scene{height:590px}
+.readout{margin-top:16px;padding-top:14px;border-top:2px dashed var(--line);font-size:14px;line-height:1.8}
+.readout strong{color:var(--ink)}
+.status{margin-top:16px;padding:13px;border-top:3px solid var(--red);background:rgba(255,255,255,.38);color:var(--red);font-weight:800;font-size:14px;line-height:1.4;text-align:center;min-height:62px}
+.note{margin-top:14px;color:var(--muted);font-size:13px;line-height:1.5}
+.legend{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);color:var(--ink2);font-size:12px;line-height:1.55}
+body.blueprint{--page:#071725;--panel:#0e2a41;--paper:#0c263b;--ink:#b2e7ff;--ink2:#69c8f0;--red:#ff8079;--muted:#9dbfce;--line:#2b5e7b;--button:#133a57;color:#eaf8ff}
+body.warroom{--page:#4c5044;--panel:#ddd6ba;--paper:#d6cfb2;--ink:#213722;--ink2:#4f684f;--red:#8b342e;--muted:#5d655a;--line:#8f8a72;--button:#c8c1a5}
+@media(max-width:900px){
+  .top{align-items:flex-start;flex-direction:column}.layout{grid-template-columns:1fr}.stage{min-height:560px}#scene{height:560px}.panel{padding:16px}
 }
 </style>
 </head>
 <body>
 <main>
-<div class="topbar">
-  <div>
-    <h1>GRAPH WAR <span style="font-size:12px;font-weight:400">V0.9 ENVIRONMENT TEST</span></h1>
-    <div class="sub">Raised terrain + real projectile clearance + shallow 2.5D board + continuous slow orbit.</div>
-  </div>
-  <div class="themebox"><b>THEME</b>
-    <select id="theme">
-      <option value="notebook">Field Notebook</option>
-      <option value="blueprint">Blueprint</option>
-      <option value="warroom">War Room</option>
-    </select>
-  </div>
-</div>
-
-<div class="layout">
-<section class="paper stage" id="stage">
-  <canvas id="scene"></canvas>
-  <div class="hudstrip">
-    <div><b>EAST THEATER // RIDGE PASS</b><br><span id="orbitLabel">CAMERA: slow orbit</span></div>
-    <div style="text-align:right">WEST BATTERY<br><span id="volleyLabel">VOLLEY 1</span></div>
-  </div>
-  <div class="callout" id="callout">RIDGE STRIKE</div>
-</section>
-
-<aside class="paper panel">
-  <h2>FIRING SOLUTION</h2>
-  <div class="kicker">OBSTACLE TEST: RIDGE 05</div>
-
-  <div class="control">
-    <label><span>ANGLE</span><span id="angleVal">45°</span></label>
-    <input id="angle" type="range" min="18" max="76" value="45">
-  </div>
-  <div class="control">
-    <label><span>POWER</span><span id="powerVal">65%</span></label>
-    <input id="power" type="range" min="25" max="100" value="65">
+  <div class="top">
+    <div>
+      <h1>GRAPH WAR <span class="version">V0.9.1 2.5D TEST</span></h1>
+      <div class="sub">Raised terrain, slow orbit, obstacle collision — rebuilt for stable rendering and clearer readability.</div>
+    </div>
+    <div class="theme">
+      <span>THEME</span>
+      <select id="theme">
+        <option value="notebook">Field Notebook</option>
+        <option value="blueprint">Blueprint</option>
+        <option value="warroom">War Room</option>
+      </select>
+    </div>
   </div>
 
-  <button id="fire" class="fire">LOCK & FIRE</button>
+  <div class="layout">
+    <section class="stage">
+      <canvas id="scene"></canvas>
+      <div class="hud">
+        <div>EAST THEATER // RIDGE PASS<br><span id="orbitLabel">CAMERA: slow orbit</span></div>
+        <div style="text-align:right">WEST BATTERY<br><span id="volleyLabel">VOLLEY 1</span></div>
+      </div>
+      <div id="callout" class="callout">RIDGE STRIKE</div>
+    </section>
 
-  <div class="readout">
-    <div>Projected landing: <strong id="rangeVal">—</strong></div>
-    <div>Path status: <strong id="pathVal">—</strong></div>
-    <div>Peak clearance: <strong id="clearanceVal">—</strong></div>
-    <div>Previous shot: <strong id="previousVal">—</strong></div>
-  </div>
+    <aside class="panel">
+      <h2>FIRING SOLUTION</h2>
+      <div class="kicker">OBSTACLE TEST: RIDGE 05</div>
 
-  <div id="status" class="status">Plot a shot over or into the ridge.</div>
-  <div class="note">The landing reticle remains on the chart plane. The shell now travels above it in world space. High arcs can clear the ridge; low arcs can physically strike it.</div>
-  <div class="legend">
-    CAMERA: slow ±10° ambient orbit.<br>
-    AIMING: orbit dampens while sliders are being adjusted.<br>
-    TERRAIN: raised obstacle has collision height, not just decoration.
+      <div class="control">
+        <label><span>ANGLE</span><span id="angleVal">45°</span></label>
+        <input id="angle" type="range" min="18" max="76" value="45">
+      </div>
+
+      <div class="control">
+        <label><span>POWER</span><span id="powerVal">65%</span></label>
+        <input id="power" type="range" min="25" max="100" value="65">
+      </div>
+
+      <button id="fire" class="fire">LOCK & FIRE</button>
+
+      <div class="readout">
+        <div>Landing estimate: <strong id="rangeVal">—</strong></div>
+        <div>Path: <strong id="pathVal">—</strong></div>
+        <div>Ridge clearance: <strong id="clearanceVal">—</strong></div>
+        <div>Previous: <strong id="previousVal">—</strong></div>
+      </div>
+
+      <div id="status" class="status">Adjust the shot. Clear the ridge or hit it.</div>
+
+      <div class="note">The reticle is fixed to the board plane. The shell rises above the chart in world space. The ridge has real height and can stop a low shot.</div>
+
+      <div class="legend">
+        Slow orbit pauses down while aiming.<br>
+        X marks a direct hit. O marks a miss or obstacle strike.
+      </div>
+    </aside>
   </div>
-</aside>
-</div>
 </main>
 
 <script>
 (function(){
 "use strict";
-var canvas=document.getElementById("scene"),ctx=canvas.getContext("2d");
-var stage=document.getElementById("stage"),theme=document.getElementById("theme");
-var angle=document.getElementById("angle"),power=document.getElementById("power"),fire=document.getElementById("fire");
-var angleVal=document.getElementById("angleVal"),powerVal=document.getElementById("powerVal"),rangeVal=document.getElementById("rangeVal");
-var pathVal=document.getElementById("pathVal"),clearanceVal=document.getElementById("clearanceVal"),previousVal=document.getElementById("previousVal");
-var status=document.getElementById("status"),callout=document.getElementById("callout"),volleyLabel=document.getElementById("volleyLabel"),orbitLabel=document.getElementById("orbitLabel");
 
-var DPR=Math.min(2,window.devicePixelRatio||1),W=1000,H=700;
-var shot=null,history=[],volley=1,lastTime=performance.now(),aimingUntil=0;
-var gun={x:8,y:1,z:50}, target={x:88,z:50,r:5};
-var g=75;
+var canvas=document.getElementById("scene");
+var ctx=canvas.getContext("2d");
+var angle=document.getElementById("angle");
+var power=document.getElementById("power");
+var fire=document.getElementById("fire");
+var theme=document.getElementById("theme");
+var angleVal=document.getElementById("angleVal");
+var powerVal=document.getElementById("powerVal");
+var rangeVal=document.getElementById("rangeVal");
+var pathVal=document.getElementById("pathVal");
+var clearanceVal=document.getElementById("clearanceVal");
+var previousVal=document.getElementById("previousVal");
+var status=document.getElementById("status");
+var callout=document.getElementById("callout");
+var orbitLabel=document.getElementById("orbitLabel");
+var volleyLabel=document.getElementById("volleyLabel");
+
+if(!ctx){
+  status.textContent="Canvas rendering is unavailable in this browser.";
+  return;
+}
+
+var dpr=Math.min(2,window.devicePixelRatio||1);
+var cssW=1000,cssH=700;
+var gun={x:8,y:1,z:50};
+var target={x:88,z:50,r:5};
+var gravity=75;
+var shot=null;
+var history=[];
+var volley=1;
+var aimingUntil=0;
+
 var ridge=[
- {x0:47,x1:54,z0:20,z1:34,h:13},
- {x0:47,x1:54,z0:34,z1:47,h:19},
- {x0:47,x1:54,z0:47,z1:62,h:24},
- {x0:47,x1:54,z0:62,z1:77,h:16},
- {x0:47,x1:54,z0:77,z1:84,h:11}
+  {x0:47,x1:55,z0:18,z1:35,h:12},
+  {x0:47,x1:55,z0:35,z1:48,h:18},
+  {x0:47,x1:55,z0:48,z1:62,h:24},
+  {x0:47,x1:55,z0:62,z1:77,h:17},
+  {x0:47,x1:55,z0:77,z1:86,h:11}
 ];
 
 var palettes={
- notebook:{bg:"#f7f1e4",grid:"rgba(73,139,186,.26)",ink:"#163a61",terrainTop:"#cfc6a9",terrainSide:"#aaa085",red:"#aa3f36",water:"#edf5f6",shadow:"rgba(35,45,55,.18)"},
- blueprint:{bg:"#0d2940",grid:"rgba(106,211,255,.22)",ink:"#8ed8ff",terrainTop:"#214d68",terrainSide:"#173b52",red:"#ff756e",water:"#103149",shadow:"rgba(0,0,0,.28)"},
- warroom:{bg:"#d8d2b8",grid:"rgba(57,86,55,.22)",ink:"#263625",terrainTop:"#9d9d78",terrainSide:"#74755a",red:"#8b342e",water:"#cbc8ac",shadow:"rgba(44,45,34,.2)"}
+  notebook:{bg:"#f7f1e4",board:"#edf5f6",grid:"rgba(49,112,158,.25)",ink:"#12375d",red:"#a33831",top:"#cfc6a9",side:"#aaa085",shadow:"rgba(20,30,38,.16)"},
+  blueprint:{bg:"#0c263b",board:"#103149",grid:"rgba(115,211,255,.25)",ink:"#b2e7ff",red:"#ff8079",top:"#24506b",side:"#173c53",shadow:"rgba(0,0,0,.28)"},
+  warroom:{bg:"#d6cfb2",board:"#cbc8ac",grid:"rgba(45,76,45,.22)",ink:"#213722",red:"#8b342e",top:"#9d9d78",side:"#74755a",shadow:"rgba(40,40,30,.18)"}
 };
 var pal=palettes.notebook;
 
 function resize(){
- var r=canvas.getBoundingClientRect();canvas.width=Math.max(1,Math.round(r.width*DPR));canvas.height=Math.max(1,Math.round(r.height*DPR));
- ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);
+  var rect=canvas.getBoundingClientRect();
+  canvas.width=Math.max(1,Math.round(rect.width*dpr));
+  canvas.height=Math.max(1,Math.round(rect.height*dpr));
+  cssW=rect.width;
+  cssH=rect.height;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
 }
-window.addEventListener("resize",resize);resize();
+window.addEventListener("resize",resize);
+resize();
 
-function V(x,y,z){return{x:x,y:y,z:z}}
-function sub(a,b){return V(a.x-b.x,a.y-b.y,a.z-b.z)}
-function dot(a,b){return a.x*b.x+a.y*b.y+a.z*b.z}
-function cross(a,b){return V(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x)}
-function norm(a){var l=Math.hypot(a.x,a.y,a.z)||1;return V(a.x/l,a.y/l,a.z/l)}
-
-function camera(now){
- var damp=now<aimingUntil ? .18 : 1;
- var phase=now/17000;
- var az=(-Math.PI/2)+(Math.sin(phase)*0.18*damp);
- var radius=155,cam=V(50+Math.cos(az)*radius,88,50+Math.sin(az)*radius);
- var targetCam=V(50,0,50),forward=norm(sub(targetCam,cam)),right=norm(cross(forward,V(0,1,0))),up=cross(right,forward);
- return{pos:cam,forward:forward,right:right,up:up,f:720};
-}
-function project(p,cam){
- var r=sub(p,cam),z=dot(r,cam.forward);if(z<=1)return null;
- var s=cam.f/z;
- return{x:W/2+dot(r,cam.right)*s,y:H/2-dot(r,cam.up)*s,s:s,z:z};
-}
-function poly(points,fill,stroke,width,cam){
- var pts=points.map(function(p){return project(p,cam)});if(pts.some(function(p){return !p}))return;
- ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(var i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();
- if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width||1;ctx.stroke()}
-}
-function line3(a,b,color,width,cam,dash){
- var pa=project(a,cam),pb=project(b,cam);if(!pa||!pb)return;
- ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width||1;if(dash)ctx.setLineDash(dash);
- ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);ctx.stroke();ctx.restore();
-}
-function circleOnPlane(cx,cz,r,color,cam,dash){
- ctx.save();ctx.strokeStyle=color;ctx.lineWidth=2;if(dash)ctx.setLineDash(dash);ctx.beginPath();
- for(var i=0;i<=48;i++){var a=Math.PI*2*i/48,p=project(V(cx+Math.cos(a)*r,.35,cz+Math.sin(a)*r),cam);if(!p)continue;if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)}
- ctx.stroke();ctx.restore();
+function proj(x,y,z,theta){
+  var dx=x-50;
+  var dz=z-50;
+  var ct=Math.cos(theta);
+  var st=Math.sin(theta);
+  var rx=dx*ct-dz*st;
+  var rz=dx*st+dz*ct;
+  var sx=cssW/2+rx*(cssW/145);
+  var sy=cssH*0.57+rz*(cssH/380)-y*(cssH/95);
+  return{x:sx,y:sy};
 }
 
-function drawBoard(cam){
- ctx.fillStyle=pal.bg;ctx.fillRect(0,0,W,H);
- poly([V(0,0,0),V(100,0,0),V(100,0,100),V(0,0,100)],pal.water,pal.ink,1.5,cam);
- for(var i=0;i<=100;i+=10){line3(V(i,.05,0),V(i,.05,100),pal.grid,1,cam);line3(V(0,.05,i),V(100,.05,i),pal.grid,1,cam)}
- // range bands
- for(var r=20;r<=80;r+=20)circleOnPlane(gun.x,gun.z,r,"rgba(120,120,120,.10)",cam);
+function poly(points,fill,stroke,theta){
+  ctx.beginPath();
+  for(var i=0;i<points.length;i++){
+    var p=proj(points[i][0],points[i][1],points[i][2],theta);
+    if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+  }
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1.5;ctx.stroke();}
 }
-function drawBox(b,cam){
- var x0=b.x0,x1=b.x1,z0=b.z0,z1=b.z1,h=b.h;
- poly([V(x0,0,z0),V(x1,0,z0),V(x1,h,z0),V(x0,h,z0)],pal.terrainSide,pal.ink,1,cam);
- poly([V(x1,0,z0),V(x1,0,z1),V(x1,h,z1),V(x1,h,z0)],pal.terrainSide,pal.ink,1,cam);
- poly([V(x0,h,z0),V(x1,h,z0),V(x1,h,z1),V(x0,h,z1)],pal.terrainTop,pal.ink,1.2,cam);
+
+function line(a,b,color,width,theta,dash){
+  var p1=proj(a[0],a[1],a[2],theta);
+  var p2=proj(b[0],b[1],b[2],theta);
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.lineWidth=width||1;
+  if(dash)ctx.setLineDash(dash);
+  ctx.beginPath();
+  ctx.moveTo(p1.x,p1.y);
+  ctx.lineTo(p2.x,p2.y);
+  ctx.stroke();
+  ctx.restore();
 }
-function drawRidge(cam){ridge.forEach(function(b){drawBox(b,cam)})}
-function drawGun(cam){
- var p=project(V(gun.x,1.2,gun.z),cam);if(!p)return;
- ctx.save();ctx.fillStyle=pal.ink;ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.fill();ctx.font="12px Courier New";ctx.fillText("WEST BATTERY",p.x-42,p.y+26);ctx.restore();
+
+function drawBoard(theta){
+  ctx.fillStyle=pal.bg;
+  ctx.fillRect(0,0,cssW,cssH);
+
+  poly([[0,0,0],[100,0,0],[100,0,100],[0,0,100]],pal.board,pal.ink,theta);
+
+  for(var i=0;i<=100;i+=10){
+    line([i,.05,0],[i,.05,100],pal.grid,1,theta);
+    line([0,.05,i],[100,.05,i],pal.grid,1,theta);
+  }
 }
-function drawTarget(cam,revealed){
- var p=project(V(target.x,.5,target.z),cam);if(!p)return;
- circleOnPlane(target.x,target.z,target.r,revealed?pal.red:"rgba(170,63,54,.28)",cam,[6,5]);
- if(revealed){ctx.save();ctx.strokeStyle=pal.ink;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(p.x-18,p.y);ctx.lineTo(p.x+18,p.y);ctx.stroke();ctx.restore()}
+
+function drawRidge(theta){
+  for(var i=0;i<ridge.length;i++){
+    var b=ridge[i];
+    poly([[b.x0,0,b.z0],[b.x1,0,b.z0],[b.x1,b.h,b.z0],[b.x0,b.h,b.z0]],pal.side,pal.ink,theta);
+    poly([[b.x1,0,b.z0],[b.x1,0,b.z1],[b.x1,b.h,b.z1],[b.x1,b.h,b.z0]],pal.side,pal.ink,theta);
+    poly([[b.x0,b.h,b.z0],[b.x1,b.h,b.z0],[b.x1,b.h,b.z1],[b.x0,b.h,b.z1]],pal.top,pal.ink,theta);
+  }
 }
-function speed(){return 50+(+power.value)*.45}
-function solution(){
- var a=(+angle.value)*Math.PI/180,v=speed(),vx=v*Math.cos(a),vy=v*Math.sin(a),t=2*vy/g,range=vx*t;
- var landX=gun.x+range,peak=(vy*vy)/(2*g),collision=traceCollision(vx,vy,t);
- return{angle:+angle.value,power:+power.value,vx:vx,vy:vy,t:t,landX:landX,peak:peak,collision:collision};
-}
+
 function ridgeHeightAt(x,z){
- for(var i=0;i<ridge.length;i++){var b=ridge[i];if(x>=b.x0&&x<=b.x1&&z>=b.z0&&z<=b.z1)return b.h}return 0;
+  for(var i=0;i<ridge.length;i++){
+    var b=ridge[i];
+    if(x>=b.x0&&x<=b.x1&&z>=b.z0&&z<=b.z1)return b.h;
+  }
+  return 0;
 }
-function traceCollision(vx,vy,tEnd){
- var steps=180;
- for(var i=1;i<=steps;i++){var t=tEnd*i/steps,x=gun.x+vx*t,y=gun.y+vy*t-.5*g*t*t,z=gun.z,h=ridgeHeightAt(x,z);if(h>0&&y<=h)return{x:x,y:y,z:z,h:h,t:t}}
- return null;
+
+function speed(){
+  return 50+(Number(power.value)*.45);
 }
-function previewPoint(sol,t){return V(gun.x+sol.vx*t,gun.y+sol.vy*t-.5*g*t*t,gun.z)}
-function drawPreview(sol,cam){
- ctx.save();ctx.strokeStyle=pal.ink;ctx.globalAlpha=.34;ctx.lineWidth=2;ctx.setLineDash([7,7]);ctx.beginPath();
- var end=sol.collision?sol.collision.t:sol.t,started=false;
- for(var i=0;i<=80;i++){var t=end*i/80,p=project(previewPoint(sol,t),cam);if(!p)continue;if(!started){ctx.moveTo(p.x,p.y);started=true}else ctx.lineTo(p.x,p.y)}
- ctx.stroke();ctx.restore();
- var retX=Math.max(0,Math.min(100,sol.landX));circleOnPlane(retX,gun.z,4.3,sol.collision?pal.red:pal.ink,cam,[7,5]);
+
+function solution(){
+  var deg=Number(angle.value);
+  var a=deg*Math.PI/180;
+  var v=speed();
+  var vx=v*Math.cos(a);
+  var vy=v*Math.sin(a);
+  var totalT=(2*vy)/gravity;
+  var landX=gun.x+vx*totalT;
+  var collision=null;
+
+  for(var i=1;i<=220;i++){
+    var t=totalT*i/220;
+    var x=gun.x+vx*t;
+    var y=gun.y+vy*t-.5*gravity*t*t;
+    var h=ridgeHeightAt(x,gun.z);
+    if(h>0&&y<=h){
+      collision={x:x,y:y,t:t,h:h};
+      break;
+    }
+  }
+
+  return{deg:deg,power:Number(power.value),vx:vx,vy:vy,totalT:totalT,landX:landX,collision:collision};
 }
-function drawHistory(cam){
- history.forEach(function(h){var p=project(V(h.x,.3,h.z),cam);if(!p)return;ctx.save();ctx.strokeStyle=h.kind==="hit"?pal.red:pal.ink;ctx.globalAlpha=.55;ctx.lineWidth=2;ctx.beginPath();if(h.kind==="hit"){ctx.moveTo(p.x-8,p.y-8);ctx.lineTo(p.x+8,p.y+8);ctx.moveTo(p.x+8,p.y-8);ctx.lineTo(p.x-8,p.y+8)}else{ctx.arc(p.x,p.y,6,0,Math.PI*2)}ctx.stroke();ctx.restore()});
+
+function trajectoryPoint(sol,t){
+  return{x:gun.x+sol.vx*t,y:gun.y+sol.vy*t-.5*gravity*t*t,z:gun.z};
 }
-function drawShot(now,cam){
- if(!shot)return;
- var q=Math.min(1,(now-shot.start)/shot.duration),t=shot.endT*q,p3=previewPoint(shot.sol,t),p=project(p3,cam);
- // trail
- ctx.save();ctx.strokeStyle=pal.red;ctx.globalAlpha=.55;ctx.lineWidth=3;ctx.beginPath();var start=Math.max(0,q-.15),beg=false;
- for(var i=0;i<=22;i++){var qi=start+(q-start)*i/22,pt=project(previewPoint(shot.sol,shot.endT*qi),cam);if(!pt)continue;if(!beg){ctx.moveTo(pt.x,pt.y);beg=true}else ctx.lineTo(pt.x,pt.y)}ctx.stroke();ctx.restore();
- if(p){ctx.fillStyle=pal.red;ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill()}
- if(q>=1&&!shot.done){shot.done=true;resolveShot(shot.sol)}
+
+function drawCircleOnPlane(x,z,r,color,theta,dashed){
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.lineWidth=2;
+  if(dashed)ctx.setLineDash([7,6]);
+  ctx.beginPath();
+  for(var i=0;i<=48;i++){
+    var a=Math.PI*2*i/48;
+    var p=proj(x+Math.cos(a)*r,.2,z+Math.sin(a)*r,theta);
+    if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+  }
+  ctx.stroke();
+  ctx.restore();
 }
-function flash(text){callout.textContent=text;callout.classList.remove("show");void callout.offsetWidth;callout.classList.add("show")}
+
+function drawGun(theta){
+  var p=proj(gun.x,1.2,gun.z,theta);
+  ctx.fillStyle=pal.ink;
+  ctx.beginPath();
+  ctx.arc(p.x,p.y,8,0,Math.PI*2);
+  ctx.fill();
+}
+
+function drawTarget(theta){
+  var hit=history.some(function(h){return h.kind==="hit";});
+  drawCircleOnPlane(target.x,target.z,target.r,hit?pal.red:"rgba(160,60,50,.30)",theta,true);
+}
+
+function drawHistory(theta){
+  history.forEach(function(h){
+    var p=proj(h.x,.3,h.z,theta);
+    ctx.save();
+    ctx.strokeStyle=h.kind==="hit"?pal.red:pal.ink;
+    ctx.globalAlpha=.65;
+    ctx.lineWidth=2.5;
+    ctx.beginPath();
+    if(h.kind==="hit"){
+      ctx.moveTo(p.x-9,p.y-9);ctx.lineTo(p.x+9,p.y+9);
+      ctx.moveTo(p.x+9,p.y-9);ctx.lineTo(p.x-9,p.y+9);
+    }else{
+      ctx.arc(p.x,p.y,7,0,Math.PI*2);
+    }
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawPreview(sol,theta){
+  var endT=sol.collision?sol.collision.t:sol.totalT;
+  ctx.save();
+  ctx.strokeStyle=sol.collision?pal.red:pal.ink;
+  ctx.globalAlpha=.36;
+  ctx.lineWidth=2;
+  ctx.setLineDash([7,7]);
+  ctx.beginPath();
+  for(var i=0;i<=90;i++){
+    var t=endT*i/90;
+    var q=trajectoryPoint(sol,t);
+    var p=proj(q.x,q.y,q.z,theta);
+    if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  var retX=Math.max(0,Math.min(100,sol.landX));
+  drawCircleOnPlane(retX,gun.z,4.5,sol.collision?pal.red:pal.ink,theta,true);
+}
+
+function drawShot(now,theta){
+  if(!shot)return;
+  var q=Math.min(1,(now-shot.start)/shot.duration);
+  var t=shot.endT*q;
+
+  ctx.save();
+  ctx.strokeStyle=pal.red;
+  ctx.globalAlpha=.62;
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  var startQ=Math.max(0,q-.18);
+  for(var i=0;i<=24;i++){
+    var qi=startQ+(q-startQ)*i/24;
+    var wp=trajectoryPoint(shot.sol,shot.endT*qi);
+    var sp=proj(wp.x,wp.y,wp.z,theta);
+    if(i===0)ctx.moveTo(sp.x,sp.y);else ctx.lineTo(sp.x,sp.y);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  var w=trajectoryPoint(shot.sol,t);
+  var p=proj(w.x,w.y,w.z,theta);
+  ctx.fillStyle=pal.red;
+  ctx.beginPath();
+  ctx.arc(p.x,p.y,5.5,0,Math.PI*2);
+  ctx.fill();
+
+  if(q>=1&&!shot.done){
+    shot.done=true;
+    resolveShot(shot.sol);
+  }
+}
+
+function flash(text){
+  callout.textContent=text;
+  callout.classList.remove("show");
+  void callout.offsetWidth;
+  callout.classList.add("show");
+}
+
 function resolveShot(sol){
- var kind,x,z=gun.z;
- if(sol.collision){kind="ridge";x=sol.collision.x;status.textContent="RIDGE STRIKE — raise the arc or change power.";flash("RIDGE STRIKE")}
- else{x=sol.landX;var hit=Math.abs(x-target.x)<=target.r;if(hit){kind="hit";status.textContent="DIRECT HIT — target exposed.";flash("DIRECT HIT")}else{kind="miss";status.textContent=x>100?"LONG — shot carried beyond the chart.":"SPLASH — correct from the mark.";flash(x>100?"LONG":"SPLASH")}}
- history.push({x:Math.max(0,Math.min(100,x)),z:z,kind:kind==="hit"?"hit":"miss"});if(history.length>8)history.shift();
- previousVal.textContent=sol.angle+"° / "+sol.power+"% → "+(kind==="ridge"?"RIDGE":Math.round(x));
- volley++;volleyLabel.textContent="VOLLEY "+volley;fire.disabled=false;shot=null;updateReadout();
+  var x;
+  var kind;
+
+  if(sol.collision){
+    x=sol.collision.x;
+    kind="ridge";
+    status.textContent="RIDGE STRIKE — raise the arc or change power.";
+    flash("RIDGE STRIKE");
+  }else{
+    x=sol.landX;
+    if(Math.abs(x-target.x)<=target.r){
+      kind="hit";
+      status.textContent="DIRECT HIT — target exposed.";
+      flash("DIRECT HIT");
+    }else{
+      kind="miss";
+      status.textContent=x>100?"LONG — shot left the chart.":"SPLASH — correct from the mark.";
+      flash(x>100?"LONG":"SPLASH");
+    }
+  }
+
+  history.push({x:Math.max(0,Math.min(100,x)),z:gun.z,kind:kind==="hit"?"hit":"miss"});
+  if(history.length>9)history.shift();
+
+  previousVal.textContent=sol.deg+"° / "+sol.power+"% → "+(kind==="ridge"?"RIDGE":Math.round(x));
+  volley++;
+  volleyLabel.textContent="VOLLEY "+volley;
+  fire.disabled=false;
+  shot=null;
+  updateReadout();
 }
+
 function fireShot(){
- if(shot)return;var sol=solution(),endT=sol.collision?sol.collision.t:sol.t;shot={sol:sol,start:performance.now(),duration:1450,endT:endT,done:false};fire.disabled=true;status.textContent="SHOT AWAY — watch the clearance.";flash("SHOT AWAY")
+  if(shot)return;
+  var sol=solution();
+  shot={
+    sol:sol,
+    start:performance.now(),
+    duration:1450,
+    endT:sol.collision?sol.collision.t:sol.totalT,
+    done:false
+  };
+  fire.disabled=true;
+  status.textContent="SHOT AWAY — watch the ridge clearance.";
+  flash("SHOT AWAY");
 }
+
 function updateReadout(){
- var sol=solution();angleVal.textContent=sol.angle+"°";powerVal.textContent=sol.power+"%";rangeVal.textContent=Math.round(sol.landX)+" units";
- pathVal.textContent=sol.collision?"BLOCKED BY RIDGE":"CLEAR";pathVal.style.color=sol.collision?"var(--red)":"var(--ink)";
- var ridgeH=ridgeHeightAt(50,gun.z),a=sol.angle*Math.PI/180,v=speed(),vx=v*Math.cos(a),vy=v*Math.sin(a),t=(50-gun.x)/vx,y=gun.y+vy*t-.5*g*t*t;
- clearanceVal.textContent=Math.round(y-ridgeH)+" units";
+  var sol=solution();
+  angleVal.textContent=sol.deg+"°";
+  powerVal.textContent=sol.power+"%";
+  rangeVal.textContent=Math.round(sol.landX)+" units";
+  pathVal.textContent=sol.collision?"BLOCKED":"CLEAR";
+  pathVal.style.color=sol.collision?"var(--red)":"var(--ink)";
+
+  var testX=51;
+  var testT=(testX-gun.x)/sol.vx;
+  var yAtRidge=gun.y+sol.vy*testT-.5*gravity*testT*testT;
+  var ridgeH=ridgeHeightAt(testX,gun.z);
+  clearanceVal.textContent=Math.round(yAtRidge-ridgeH)+" units";
 }
+
+function aimChanged(){
+  aimingUntil=performance.now()+1200;
+  orbitLabel.textContent="CAMERA: orbit damped while aiming";
+  clearTimeout(aimChanged.timer);
+  aimChanged.timer=setTimeout(function(){
+    orbitLabel.textContent="CAMERA: slow orbit";
+  },1250);
+  updateReadout();
+}
+
 function frame(now){
- var cam=camera(now);drawBoard(cam);drawRidge(cam);drawHistory(cam);drawGun(cam);drawTarget(cam,history.some(function(h){return h.kind==="hit"}));drawPreview(solution(),cam);drawShot(now,cam);requestAnimationFrame(frame);
+  var orbitScale=now<aimingUntil ? .18 : 1;
+  var theta=-.20+Math.sin(now/18000)*.18*orbitScale;
+
+  drawBoard(theta);
+  drawRidge(theta);
+  drawHistory(theta);
+  drawGun(theta);
+  drawTarget(theta);
+  drawPreview(solution(),theta);
+  drawShot(now,theta);
+
+  requestAnimationFrame(frame);
 }
-function nudgeAim(){aimingUntil=performance.now()+1100;orbitLabel.textContent="CAMERA: orbit damped for aiming";clearTimeout(nudgeAim.t);nudgeAim.t=setTimeout(function(){orbitLabel.textContent="CAMERA: slow orbit"},1150);updateReadout()}
-angle.addEventListener("input",nudgeAim);power.addEventListener("input",nudgeAim);fire.addEventListener("click",fireShot);
-theme.addEventListener("change",function(){document.body.classList.remove("blueprint","warroom");if(this.value!=="notebook")document.body.classList.add(this.value);pal=palettes[this.value]});
-updateReadout();requestAnimationFrame(frame);
+
+angle.addEventListener("input",aimChanged);
+power.addEventListener("input",aimChanged);
+fire.addEventListener("click",fireShot);
+
+theme.addEventListener("change",function(){
+  document.body.classList.remove("blueprint","warroom");
+  if(this.value!=="notebook")document.body.classList.add(this.value);
+  pal=palettes[this.value];
+});
+
+updateReadout();
+requestAnimationFrame(frame);
 })();
 </script>
 </body>
