@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.2 — Bearing Aiming</title>
+<title>Graph War V0.10.3 — Fleet Damage</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -58,8 +58,8 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.2 BEARING</span></h1>
-      <div class="sub">Three-axis artillery: drag across the tactical board to set bearing, then solve elevation and power through real 2.5D terrain.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.3 FLEET DAMAGE</span></h1>
+      <div class="sub">Fleet attrition is now visible: reveal enemy ships through hits, track persistent damage, and survive a less brutal return-fire cadence.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -73,11 +73,11 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 
   
   <section class="frontbar" aria-label="Four front command table">
-    <button class="frontCard" data-front="north"><span class="dir">NORTH</span><strong>Ice Shelf</strong><small>high cliffs · narrow clearance</small><em id="northIntel">No hits</em></button>
-    <button class="frontCard active" data-front="east"><span class="dir">EAST</span><strong>Ridge Pass</strong><small>broken islands · staggered ridge</small><em id="eastIntel">No hits</em></button>
+    <button class="frontCard" data-front="north"><span class="dir">NORTH</span><strong>Ice Shelf</strong><small>high cliffs · narrow clearance</small><div class="fleetStrip" id="northFleet"></div><em id="northIntel">No hits</em></button>
+    <button class="frontCard active" data-front="east"><span class="dir">EAST</span><strong>Ridge Pass</strong><small>broken islands · staggered ridge</small><div class="fleetStrip" id="eastFleet"></div><em id="eastIntel">No hits</em></button>
     <div class="globeMark" aria-hidden="true"><div class="globeCore">✦</div><span>GLOBAL<br>COMMAND</span></div>
-    <button class="frontCard" data-front="south"><span class="dir">SOUTH</span><strong>Dune Line</strong><small>low berms · long arcs</small><em id="southIntel">No hits</em></button>
-    <div class="frontCard home"><span class="dir">WEST</span><strong>Your Front</strong><small>home battery · holding</small><em id="westIntel">Fleet ready</em></div>
+    <button class="frontCard" data-front="south"><span class="dir">SOUTH</span><strong>Dune Line</strong><small>low berms · long arcs</small><div class="fleetStrip" id="southFleet"></div><em id="southIntel">No hits</em></button>
+    <div class="frontCard home"><span class="dir">WEST</span><strong>Your Front</strong><small>home battery · holding</small><div class="fleetStrip" id="westFleet"></div><em id="westIntel">Fleet ready</em></div>
   </section>
 
   <div class="layout">
@@ -176,7 +176,12 @@ var profiles={
       {x0:43,x1:50,z0:56,z1:69,h:29},
       {x0:43,x1:50,z0:69,z1:87,h:23}
     ],
-    history:[],hits:0
+    history:[],hits:0,
+    fleet:[
+      {name:"Destroyer",code:"DD",hp:2,max:2,revealed:false},
+      {name:"Cruiser",code:"CA",hp:3,max:3,revealed:false},
+      {name:"Carrier",code:"CV",hp:4,max:4,revealed:false}
+    ]
   },
   east:{
     title:"East Theater · Ridge Pass",
@@ -190,7 +195,12 @@ var profiles={
       {x0:47,x1:55,z0:62,z1:77,h:17},
       {x0:47,x1:55,z0:77,z1:86,h:11}
     ],
-    history:[],hits:0
+    history:[],hits:0,
+    fleet:[
+      {name:"Destroyer",code:"DD",hp:2,max:2,revealed:false},
+      {name:"Cruiser",code:"CA",hp:3,max:3,revealed:false},
+      {name:"Carrier",code:"CV",hp:4,max:4,revealed:false}
+    ]
   },
   south:{
     title:"South Theater · Dune Line",
@@ -202,9 +212,19 @@ var profiles={
       {x0:47,x1:56,z0:34,z1:68,h:11},
       {x0:58,x1:65,z0:62,z1:91,h:7}
     ],
-    history:[],hits:0
+    history:[],hits:0,
+    fleet:[
+      {name:"Destroyer",code:"DD",hp:2,max:2,revealed:false},
+      {name:"Cruiser",code:"CA",hp:3,max:3,revealed:false},
+      {name:"Carrier",code:"CV",hp:4,max:4,revealed:false}
+    ]
   }
 };
+var westFleet=[
+  {name:"Destroyer",code:"DD",hp:2,max:2,revealed:true},
+  {name:"Cruiser",code:"CA",hp:3,max:3,revealed:true},
+  {name:"Carrier",code:"CV",hp:4,max:4,revealed:true}
+];
 var target=profiles[currentFront].target;
 var gravity=75;
 var shot=null;
@@ -218,6 +238,7 @@ var aimingUntil=0;
 var bearing=0;
 var cameraTheta=-.20;
 var draggingBearing=false;
+var lastAttackedFront="east";
 
 function currentObstacles(){return profiles[currentFront].obstacles;}
 
@@ -539,7 +560,8 @@ function resolveShot(sol){
     var missDistance=Math.hypot(x-target.x,z-target.z);
     if(missDistance<=target.r){
       kind="hit";
-      status.textContent="DIRECT HIT — target exposed.";
+      damageEnemyShip(currentFront);
+      status.textContent="DIRECT HIT — enemy fleet damaged.";
       flash("DIRECT HIT");
     }else{
       kind="miss";
@@ -555,7 +577,9 @@ function resolveShot(sol){
     angle:sol.deg,power:sol.power,bearing:sol.bearing
   });
   if(kind==="hit")profiles[currentFront].hits++;
+  lastAttackedFront=currentFront;
   updateFrontIntel();
+  renderFleets();
   if(history.length>9)history.shift();
 
   previousVal.textContent=formatBearing(sol.bearing)+" · "+sol.deg+"° / "+sol.power+"%";
@@ -579,6 +603,31 @@ function fireShot(){
   flash("SHOT AWAY");
 }
 
+function fleetStrength(front){
+  var fleet=profiles[front].fleet;
+  var alive=fleet.filter(function(ship){return ship.hp>0;});
+  if(!alive.length)return 0;
+  var hp=alive.reduce(function(sum,ship){return sum+ship.hp;},0);
+  var max=alive.reduce(function(sum,ship){return sum+ship.max;},0);
+  return hp/max;
+}
+function frontEliminated(front){
+  return profiles[front].fleet.every(function(ship){return ship.hp<=0;});
+}
+function damageEnemyShip(front){
+  var fleet=profiles[front].fleet;
+  var ship=fleet.find(function(s){return s.hp>0;});
+  if(!ship)return;
+  ship.revealed=true;
+  ship.hp=Math.max(0,ship.hp-1);
+}
+function damageWestShip(){
+  var alive=westFleet.filter(function(ship){return ship.hp>0;});
+  if(!alive.length)return null;
+  var ship=alive[Math.floor(Math.random()*alive.length)];
+  ship.hp=Math.max(0,ship.hp-1);
+  return ship;
+}
 function incomingSpec(front,index){
   var specs={
     north:{peak:46,duration:1120,z:38,label:"NORTH"},
@@ -586,7 +635,9 @@ function incomingSpec(front,index){
     south:{peak:18,duration:760,z:63,label:"SOUTH"}
   };
   var s=specs[front];
-  var hit=Math.random()<.30;
+  var strength=fleetStrength(front);
+  var baseHit=front===lastAttackedFront?.14:.10;
+  var hit=Math.random()<(baseHit*(.55+.45*strength));
   var endZ=50+(Math.random()*14-7);
   var endX=hit?gun.x+2+(Math.random()*4):gun.x+10+(Math.random()*12);
   return{
@@ -600,10 +651,16 @@ function incomingSpec(front,index){
 function beginReturnVolley(){
   returningFire=true;
   fire.disabled=true;
-  status.textContent="INCOMING VOLLEY — North, East, and South are firing back.";
+  var order=[];
+  ["north","east","south"].forEach(function(front){
+    if(frontEliminated(front))return;
+    if(front===lastAttackedFront||Math.random()<.35)order.push(front);
+  });
+  if(!order.length&&!frontEliminated(lastAttackedFront))order.push(lastAttackedFront);
+  status.textContent=order.length>1?"INCOMING VOLLEY — multiple fronts responding.":"INCOMING FIRE — "+(order[0]||"enemy")+" front responding.";
   flash("INCOMING!");
   orbitLabel.textContent="Camera: tracking return fire";
-  runIncomingFront(["north","east","south"],0);
+  runIncomingFront(order,0);
 }
 function runIncomingFront(order,index){
   if(index>=order.length){
@@ -618,6 +675,7 @@ function runIncomingFront(order,index){
     return;
   }
   incomingShot=incomingSpec(order[index],index);
+  incomingShot.order=order;
   incomingShot.startTime=performance.now();
   status.textContent=order[index].toUpperCase()+" FRONT — incoming round.";
   setTimeout(function(){
@@ -630,15 +688,17 @@ function resolveIncoming(s){
   homeMarks.push({x:s.end.x,z:s.end.z,hit:s.hit,front:s.front});
   if(homeMarks.length>12)homeMarks.shift();
   if(s.hit){
+    var struck=damageWestShip();
     homeDamage++;
     flash(s.label+" HIT");
-    status.textContent=s.label+" FRONT scored a hit on West.";
+    status.textContent=s.label+" FRONT hit West"+(struck?" · "+struck.name+" damaged.":".");
+    renderFleets();
   }else{
     flash("SPLASH");
     status.textContent=s.label+" FRONT missed West.";
   }
   document.getElementById("westIntel").textContent=homeDamage?(homeDamage+" hit"+(homeDamage===1?"":"s")+" sustained"):"Fleet ready";
-  var order=["north","east","south"];
+  var order=s.order||[];
   var next=s.index+1;
   incomingShot=null;
   setTimeout(function(){runIncomingFront(order,next);},260);
@@ -697,12 +757,41 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 
+function shipState(ship){
+  if(ship.hp<=0)return "sunk";
+  var ratio=ship.hp/ship.max;
+  if(ratio<=.34)return "critical";
+  if(ratio<1)return "damaged";
+  return "intact";
+}
+function shipMarkup(ship,isEnemy){
+  var state=shipState(ship);
+  var label=isEnemy&&!ship.revealed&&state==="intact"?"?":ship.code;
+  var pips="";
+  for(var i=0;i<ship.max;i++)pips+='<i class="'+(i<ship.hp?"live":"lost")+'"></i>';
+  return '<span class="shipAvatar '+state+'" title="'+(ship.revealed||!isEnemy?ship.name:"Unknown contact")+'"><b>'+label+'</b><span class="hull"></span><span class="pips">'+pips+'</span></span>';
+}
+function renderFleets(){
+  ["north","east","south"].forEach(function(front){
+    var host=document.getElementById(front+"Fleet");
+    host.innerHTML=profiles[front].fleet.map(function(ship){return shipMarkup(ship,true);}).join("");
+  });
+  document.getElementById("westFleet").innerHTML=westFleet.map(function(ship){return shipMarkup(ship,false);}).join("");
+}
 function updateFrontIntel(){
   ["north","east","south"].forEach(function(front){
     var el=document.getElementById(front+"Intel");
-    var hits=profiles[front].hits;
-    el.textContent=hits?(hits+" confirmed hit"+(hits===1?"":"s")):"No hits";
+    var fleet=profiles[front].fleet;
+    var sunk=fleet.filter(function(ship){return ship.hp<=0;}).length;
+    if(sunk===fleet.length)el.textContent="Front eliminated";
+    else if(sunk)el.textContent=sunk+" ship"+(sunk===1?"":"s")+" sunk";
+    else{
+      var hits=profiles[front].hits;
+      el.textContent=hits?(hits+" confirmed hit"+(hits===1?"":"s")):"No hits";
+    }
   });
+  var westAlive=westFleet.filter(function(ship){return ship.hp>0;}).length;
+  document.getElementById("westIntel").textContent=westAlive?((3-westAlive)?(3-westAlive)+" ship"+((3-westAlive)===1?"":"s")+" lost":"Fleet ready"):"Fleet destroyed";
 }
 function switchFront(front){
   if(!profiles[front]||shot||returningFire)return;
@@ -775,6 +864,7 @@ theme.addEventListener("change",function(){
   pal=palettes[this.value];
 });
 
+renderFleets();
 updateFrontIntel();
 updateReadout();
 requestAnimationFrame(frame);
@@ -830,6 +920,19 @@ body.blueprint .status{background:#3b5363;border-color:#ff8a84}
 .frontCard strong{display:block;margin-top:2px;font-family:var(--display);font-size:20px;line-height:1;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
 .frontCard small{display:block;margin-top:5px;color:var(--muted);font-size:11px;line-height:1.3}
 .frontCard em{display:inline-block;margin-top:6px;padding:3px 6px;border-radius:999px;background:var(--chip);color:var(--ink2);font-style:normal;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.fleetStrip{display:flex;gap:5px;align-items:flex-end;margin-top:7px;min-height:31px}
+.shipAvatar{position:relative;display:inline-grid;grid-template-columns:auto 1fr;grid-template-rows:12px 8px;gap:1px 3px;align-items:center;min-width:43px;padding:2px 4px;border:1px solid var(--line);border-radius:5px;background:rgba(255,255,255,.18);color:var(--ink)}
+.shipAvatar b{font-family:var(--display);font-size:9px;line-height:1;letter-spacing:.05em}
+.shipAvatar .hull{position:relative;display:block;width:24px;height:6px;background:currentColor;clip-path:polygon(0 50%,18% 0,80% 0,100% 50%,78% 100%,15% 100%)}
+.shipAvatar .hull:after{content:"";position:absolute;left:9px;top:-3px;width:6px;height:3px;background:currentColor}
+.shipAvatar .pips{grid-column:1 / span 2;display:flex;gap:2px}
+.shipAvatar .pips i{display:block;width:5px;height:3px;border-radius:1px;background:currentColor;opacity:.25}
+.shipAvatar .pips i.live{opacity:.9}.shipAvatar .pips i.lost{background:var(--red);opacity:.55}
+.shipAvatar.damaged{color:var(--accent);border-color:var(--accent)}
+.shipAvatar.critical{color:var(--red);border-color:var(--red);box-shadow:0 0 0 1px rgba(163,56,49,.08)}
+.shipAvatar.sunk{color:var(--muted);opacity:.38;text-decoration:line-through;transform:rotate(-3deg)}
+body.blueprint .shipAvatar{background:rgba(8,25,38,.35)}
+body.warroom .shipAvatar{background:rgba(255,248,220,.28)}
 .globeMark{
   display:grid;place-items:center;align-content:center;
   min-height:84px;border:1px solid var(--line);border-radius:50%;
