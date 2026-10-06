@@ -3,296 +3,320 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.5.1 Firing Feel</title>
+<title>Graph War V0.6 Four-Front Artillery</title>
 <style>
 :root{
-  --paper:#f8f3e8;--ink:#17395f;--ink2:#42678f;--grid:rgba(75,145,194,.19);
-  --red:#a43c33;--muted:#73786f;--line:#c6b99d;--green:#4f765d
+  --paper:#f7f1e4;--ink:#163a61;--ink2:#496f95;--grid:rgba(68,139,191,.18);
+  --red:#aa3f36;--muted:#72776f;--line:#c4b79a;--green:#54775c;--land:#687b5a
 }
 *{box-sizing:border-box}
-body{margin:0;background:#e8edf1;color:#243447;font-family:"Courier New",monospace}
-main{max-width:980px;margin:auto;padding:16px}
-h1{margin:0;color:var(--ink);font-size:34px;letter-spacing:-1px}
-.sub{font-size:12px;color:var(--muted);margin:4px 0 14px}
+body{margin:0;background:#dfe7eb;color:#263747;font-family:"Courier New",monospace}
+button,input{font:inherit}
+main{max-width:1180px;margin:auto;padding:14px}
+h1{margin:0;color:var(--ink);font-size:34px;letter-spacing:-1.5px}
+.sub{font-size:12px;color:var(--muted);margin:4px 0 12px}
 .paper{background-color:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:20px 20px;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 12px rgba(50,40,30,.08)}
-.wrap{display:grid;grid-template-columns:1fr 280px;gap:14px}
-.board{position:relative;min-height:560px;overflow:hidden}
+.wartable{position:relative;min-height:330px;padding:12px;overflow:hidden}
+.front{position:absolute;width:190px;min-height:72px;border:1.5px solid var(--ink2);background:rgba(247,241,228,.78);padding:9px 10px;cursor:pointer;transform:rotate(var(--tilt));transition:.15s transform,.15s background,.15s border-color}
+.front:hover{transform:rotate(var(--tilt)) scale(1.02)}
+.front.active{border:2px solid var(--red);background:rgba(255,246,236,.94)}
+.front.you{cursor:default;border-style:dashed}
+.front b{display:block;color:var(--ink);font-size:14px}
+.front small{color:var(--muted);font-size:10px}
+.front .intel{margin-top:6px;font-size:10px;color:var(--ink2)}
+.north{top:12px;left:50%;margin-left:-95px;--tilt:-1deg}
+.east{right:16px;top:126px;--tilt:1.5deg}
+.south{bottom:12px;left:50%;margin-left:-95px;--tilt:.8deg}
+.west{left:16px;top:126px;--tilt:-1.2deg}
+.centerpiece{position:absolute;left:50%;top:50%;width:166px;height:166px;transform:translate(-50%,-50%);display:grid;place-items:center}
+.compass{position:absolute;inset:-24px;opacity:.28;animation:slowspin 60s linear infinite}
+.globe{width:132px;height:132px;border-radius:50%;overflow:hidden;box-shadow:inset -18px -15px 30px rgba(0,0,0,.24),inset 10px 10px 24px rgba(255,255,255,.28),0 5px 12px rgba(0,0,0,.15);background:radial-gradient(circle at 34% 28%,#7fb0c9,#4f7f9b 56%,#345e79 100%);border:2px solid rgba(22,58,97,.58)}
+.globe svg{width:100%;height:100%}
+.globeLand{fill:#748565;stroke:#465740;stroke-width:.7}
+.globeGrid{fill:none;stroke:#e8f1f3;stroke-opacity:.22;stroke-width:.65}
+@keyframes slowspin{to{transform:rotate(360deg)}}
+.volley-note{position:absolute;left:50%;top:250px;transform:translateX(-50%) rotate(-1deg);font-size:11px;color:var(--red);font-weight:bold;white-space:nowrap}
+.battlewrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;margin-top:14px}
+.board{position:relative;min-height:590px;overflow:hidden}
 svg{display:block;width:100%;height:100%}
 .panel{padding:14px}
-.panel h2{margin:0 0 8px;color:var(--ink);font-size:16px}
-.control{margin:14px 0}
+.panel h2{margin:0 0 4px;color:var(--ink);font-size:17px}
+.targetname{color:var(--red);font-size:12px;margin-bottom:8px;font-weight:bold}
+.targetBtns{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:8px 0 14px}
+.targetBtn{padding:7px 3px;border:1px solid var(--ink2);background:rgba(255,255,255,.28);color:var(--ink);font-size:10px;cursor:pointer}
+.targetBtn.active{border:2px solid var(--red);color:var(--red);font-weight:bold}
+.control{margin:13px 0}
 label{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--ink)}
 input[type=range]{width:100%}
-.btn{width:100%;min-height:46px;border:2px solid var(--ink);background:#eef5fb;color:var(--ink);font:inherit;font-weight:700;border-radius:5px;cursor:pointer}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-.readout{font-size:12px;line-height:1.55;border-top:1px dashed #b7aa8e;padding-top:10px;margin-top:10px}
-.legend{font-size:11px;color:var(--muted);margin-top:10px}
-.status{margin-top:12px;padding:10px;border-top:2px solid var(--red);color:var(--red);font-weight:700;text-align:center;background:rgba(255,255,255,.35)}
-@media(max-width:760px){.wrap{grid-template-columns:1fr}.board{min-height:470px}}
+.fire{width:100%;min-height:48px;border:2px solid var(--ink);background:#edf4f7;color:var(--ink);font-weight:700;border-radius:4px;cursor:pointer}
+.fire:disabled{opacity:.45}
+.readout{font-size:11px;line-height:1.62;border-top:1px dashed #b6aa90;padding-top:10px;margin-top:10px}
+.status{margin-top:12px;padding:10px;border-top:2px solid var(--red);color:var(--red);font-weight:700;text-align:center;background:rgba(255,255,255,.3);min-height:52px}
+.log{margin-top:12px;font-size:10px;line-height:1.45;color:var(--ink2);max-height:110px;overflow:auto;border-top:1px dashed #b6aa90;padding-top:7px}
+@media(max-width:800px){
+  .wartable{min-height:380px}
+  .front{width:148px;font-size:11px}.north,.south{margin-left:-74px}
+  .east{right:6px}.west{left:6px}
+  .centerpiece{width:142px;height:142px}.globe{width:108px;height:108px}
+  .battlewrap{grid-template-columns:1fr}.board{min-height:500px}
+}
 </style>
 </head>
 <body>
 <main>
-  <h1>GRAPH WAR <span style="font-size:12px;font-weight:400">V0.5.1 FIRING FEEL</span></h1>
-  <div class="sub">Recoil + shot memory + ink trail + persistent impact marks + stronger hit feedback</div>
+  <h1>GRAPH WAR <span style="font-size:12px;font-weight:400">V0.6 FOUR-FRONT ARTILLERY</span></h1>
+  <div class="sub">Choose a front. Plot the firing solution. Watch the shot. Correct from the mark.</div>
 
-  <div class="wrap">
+  <section class="paper wartable">
+    <button class="front north active" data-front="north">
+      <b>NORTH FRONT</b><small>cold-water theater</small>
+      <div class="intel" id="intelNorth">INTEL: no confirmed hits</div>
+    </button>
+    <button class="front east" data-front="east">
+      <b>EAST FRONT</b><small>island approaches</small>
+      <div class="intel" id="intelEast">INTEL: no confirmed hits</div>
+    </button>
+    <button class="front south" data-front="south">
+      <b>SOUTH FRONT</b><small>open-water lanes</small>
+      <div class="intel" id="intelSouth">INTEL: no confirmed hits</div>
+    </button>
+    <div class="front west you">
+      <b>WEST — YOU</b><small>home theater</small>
+      <div class="intel">FLEET STATUS: holding</div>
+    </div>
+
+    <div class="centerpiece" aria-label="global command map">
+      <svg class="compass" viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="100" cy="100" r="82" fill="none" stroke="#163a61" stroke-width="1.5"/>
+        <path d="M100 3 L110 82 L197 100 L118 110 L100 197 L90 118 L3 100 L82 90 Z" fill="none" stroke="#163a61" stroke-width="2"/>
+        <text x="96" y="17" font-size="10" fill="#163a61">N</text>
+        <text x="183" y="104" font-size="10" fill="#163a61">E</text>
+        <text x="96" y="191" font-size="10" fill="#163a61">S</text>
+        <text x="8" y="104" font-size="10" fill="#163a61">W</text>
+      </svg>
+      <div class="globe">
+        <svg viewBox="0 0 140 140" aria-hidden="true">
+          <ellipse class="globeGrid" cx="70" cy="70" rx="57" ry="20"/>
+          <ellipse class="globeGrid" cx="70" cy="70" rx="57" ry="42"/>
+          <ellipse class="globeGrid" cx="70" cy="70" rx="28" ry="61"/>
+          <ellipse class="globeGrid" cx="70" cy="70" rx="48" ry="61"/>
+          <path class="globeLand" d="M19 42 L27 28 43 22 55 28 58 39 50 46 44 58 35 61 29 53 20 52Z"/>
+          <path class="globeLand" d="M47 63 L58 68 63 78 58 91 54 106 46 118 40 104 42 90 36 78Z"/>
+          <path class="globeLand" d="M67 31 L82 24 104 27 119 38 116 48 102 51 94 60 81 61 74 53 64 51Z"/>
+          <path class="globeLand" d="M77 64 L92 65 102 77 98 92 88 107 75 101 69 86 70 73Z"/>
+          <path class="globeLand" d="M109 91 L121 94 126 103 118 110 107 106Z"/>
+        </svg>
+      </div>
+    </div>
+    <div class="volley-note" id="volleyNote">VOLLEY 1 • select target front</div>
+  </section>
+
+  <div class="battlewrap">
     <section class="paper board">
-      <svg id="scene" viewBox="0 0 800 560" aria-label="Graph War ballistics firing-feel test">
+      <svg id="scene" viewBox="0 0 880 590" aria-label="artillery plotting chart">
         <defs>
-          <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
-            <path d="M28 0H0V28" fill="none" stroke="#6aa2c8" stroke-opacity=".18" stroke-width="1"/>
+          <pattern id="grid" width="29" height="29" patternUnits="userSpaceOnUse">
+            <path d="M29 0H0V29" fill="none" stroke="#6aa2c8" stroke-opacity=".20" stroke-width="1"/>
           </pattern>
-          <filter id="soft"><feGaussianBlur stdDeviation="4"/></filter>
         </defs>
-        <rect x="0" y="0" width="800" height="560" fill="#f8f3e8"/>
-        <rect x="0" y="0" width="800" height="560" fill="url(#grid)"/>
+        <rect width="880" height="590" fill="#f7f1e4"/>
+        <rect width="880" height="590" fill="url(#grid)"/>
 
-        <path d="M0 430 C120 400 180 455 290 430 S500 390 620 430 S760 470 800 450 L800 560 L0 560 Z"
-              fill="#d8cfb8" stroke="#6f6a5f" stroke-width="2" opacity=".9"/>
+        <text id="chartTitle" x="590" y="36" fill="#163a61" font-size="16">NORTH THEATER</text>
+        <text x="590" y="54" fill="#72776f" font-size="10">enemy fleet positions concealed</text>
 
+        <path id="coast" d="" fill="#d7ceb8" stroke="#777064" stroke-width="2" opacity=".92"/>
         <g id="history"></g>
 
-        <g id="gun" transform="translate(80 420)">
-          <circle cx="0" cy="0" r="16" fill="#f8f3e8" stroke="#17395f" stroke-width="3"/>
-          <line id="barrel" x1="0" y1="0" x2="68" y2="0" stroke="#17395f" stroke-width="7" stroke-linecap="round"/>
+        <g id="gun" transform="translate(82 452)">
+          <circle cx="0" cy="0" r="17" fill="#f7f1e4" stroke="#163a61" stroke-width="3"/>
+          <line id="barrel" x1="0" y1="0" x2="72" y2="0" stroke="#163a61" stroke-width="7" stroke-linecap="round"/>
           <g id="muzzlePuff" opacity="0">
-            <circle cx="72" cy="0" r="10" fill="#17395f" fill-opacity=".12"/>
-            <circle cx="84" cy="-5" r="7" fill="#17395f" fill-opacity=".1"/>
-            <circle cx="83" cy="7" r="6" fill="#17395f" fill-opacity=".08"/>
+            <circle cx="76" cy="0" r="11" fill="#163a61" fill-opacity=".14"/>
+            <circle cx="88" cy="-6" r="8" fill="#163a61" fill-opacity=".10"/>
+            <circle cx="90" cy="7" r="6" fill="#163a61" fill-opacity=".08"/>
           </g>
-          <text x="-34" y="38" fill="#17395f" font-size="14">WEST GUN</text>
+          <text x="-37" y="42" fill="#163a61" font-size="13">WEST BATTERY</text>
         </g>
 
         <g id="targetShip" opacity="0">
-          <path d="M0 0 C20 -10 70 -10 95 0 L82 16 H15 Z" fill="#17395f" fill-opacity=".15" stroke="#17395f" stroke-width="2"/>
+          <path d="M0 0 C17 -10 75 -11 102 0 L88 18 H14 Z" fill="#163a61" fill-opacity=".16" stroke="#163a61" stroke-width="2"/>
+          <line x1="30" y1="-7" x2="30" y2="6" stroke="#163a61" stroke-width="2"/>
+          <line x1="48" y1="-12" x2="48" y2="6" stroke="#163a61" stroke-width="2"/>
         </g>
 
-        <path id="previewArc" d="" fill="none" stroke="#17395f" stroke-opacity=".35" stroke-width="2" stroke-dasharray="8 8"/>
-        <ellipse id="reticle" cx="0" cy="0" rx="34" ry="18" fill="#a43c33" fill-opacity=".08" stroke="#a43c33" stroke-opacity=".45" stroke-width="2" stroke-dasharray="7 6"/>
-        <text id="reticleLabel" x="0" y="0" fill="#a43c33" font-size="12">EST. SPLASH</text>
-        <text id="rangeLabel" x="0" y="0" fill="#a43c33" font-size="12"></text>
+        <path id="previewArc" d="" fill="none" stroke="#163a61" stroke-opacity=".30" stroke-width="2" stroke-dasharray="8 8"/>
+        <ellipse id="reticle" cx="0" cy="0" rx="37" ry="20" fill="#aa3f36" fill-opacity=".075" stroke="#aa3f36" stroke-opacity=".47" stroke-width="2" stroke-dasharray="8 6"/>
+        <ellipse id="reticle2" cx="0" cy="0" rx="30" ry="16" fill="none" stroke="#aa3f36" stroke-opacity=".18" stroke-width="1"/>
+        <text id="reticleLabel" x="0" y="0" fill="#aa3f36" font-size="11">EST. SPLASH</text>
+        <text id="rangeLabel" x="0" y="0" fill="#aa3f36" font-size="11"></text>
 
-        <path id="liveTrail" d="" fill="none" stroke="#17395f" stroke-opacity=".45" stroke-width="3" stroke-linecap="round"/>
-        <circle id="shell" cx="-50" cy="-50" r="5" fill="#a43c33" opacity="0"/>
+        <path id="liveTrail" d="" fill="none" stroke="#163a61" stroke-opacity=".52" stroke-width="3" stroke-linecap="round"/>
+        <circle id="shell" cx="-50" cy="-50" r="5" fill="#aa3f36" opacity="0"/>
         <g id="impact" opacity="0">
-          <path d="M-18 0 L18 0 M0 -18 L0 18 M-13 -13 L13 13 M13 -13 L-13 13" stroke="#a43c33" stroke-width="3"/>
-          <circle cx="0" cy="0" r="11" fill="#a43c33" fill-opacity=".10"/>
+          <path d="M-20 0 L20 0 M0 -20 L0 20 M-14 -14 L14 14 M14 -14 L-14 14" stroke="#aa3f36" stroke-width="3"/>
+          <circle cx="0" cy="0" r="13" fill="#aa3f36" fill-opacity=".11"/>
         </g>
-
-        <text x="610" y="42" fill="#17395f" font-size="14">EAST THEATER</text>
-        <text x="610" y="60" fill="#73786f" font-size="11">hidden fleet sector</text>
       </svg>
     </section>
 
     <aside class="paper panel">
       <h2>FIRING SOLUTION</h2>
+      <div class="targetname">TARGET: <span id="targetName">NORTH FRONT</span></div>
+      <div class="targetBtns">
+        <button class="targetBtn active" data-front="north">NORTH</button>
+        <button class="targetBtn" data-front="east">EAST</button>
+        <button class="targetBtn" data-front="south">SOUTH</button>
+      </div>
 
       <div class="control">
         <label><span>ANGLE</span><span id="angleVal">45°</span></label>
         <input id="angle" type="range" min="15" max="75" value="45">
       </div>
-
       <div class="control">
         <label><span>POWER</span><span id="powerVal">65%</span></label>
         <input id="power" type="range" min="25" max="100" value="65">
       </div>
 
-      <button id="fire" class="btn" type="button">FIRE</button>
+      <button id="fire" class="fire">LOCK & FIRE</button>
 
       <div class="readout">
-        <div>Estimated range: <strong id="rangeVal">—</strong></div>
+        <div>Projected range: <strong id="rangeVal">—</strong></div>
         <div>Landing sector: <strong id="sectorVal">—</strong></div>
         <div>Guide: <strong id="guideVal">IN RANGE</strong></div>
-        <div>Previous shot: <strong id="previousVal">—</strong></div>
+        <div>Previous vs this front: <strong id="previousVal">—</strong></div>
       </div>
-
-      <div class="legend">
-        Faint arcs and impact marks stay on the chart so you can correct from the last shot.
-      </div>
-
-      <div id="status" class="status">Adjust angle and power.</div>
+      <div id="status" class="status">Select a front and plot your shot.</div>
+      <div class="log" id="battleLog">COMMAND LOG<br>V1 — West battery ready.</div>
     </aside>
   </div>
 </main>
 
 <script>
 (function(){
-  "use strict";
-  var angle=document.getElementById("angle");
-  var power=document.getElementById("power");
-  var angleVal=document.getElementById("angleVal");
-  var powerVal=document.getElementById("powerVal");
-  var rangeVal=document.getElementById("rangeVal");
-  var sectorVal=document.getElementById("sectorVal");
-  var guideVal=document.getElementById("guideVal");
-  var previousVal=document.getElementById("previousVal");
-  var preview=document.getElementById("previewArc");
-  var reticle=document.getElementById("reticle");
-  var reticleLabel=document.getElementById("reticleLabel");
-  var rangeLabel=document.getElementById("rangeLabel");
-  var barrel=document.getElementById("barrel");
-  var gun=document.getElementById("gun");
-  var muzzlePuff=document.getElementById("muzzlePuff");
-  var shell=document.getElementById("shell");
-  var liveTrail=document.getElementById("liveTrail");
-  var impact=document.getElementById("impact");
-  var history=document.getElementById("history");
-  var status=document.getElementById("status");
-  var fire=document.getElementById("fire");
-  var targetShip=document.getElementById("targetShip");
+"use strict";
+var NS="http://www.w3.org/2000/svg";
+var angle=document.getElementById("angle"),power=document.getElementById("power");
+var angleVal=document.getElementById("angleVal"),powerVal=document.getElementById("powerVal");
+var rangeVal=document.getElementById("rangeVal"),sectorVal=document.getElementById("sectorVal");
+var guideVal=document.getElementById("guideVal"),previousVal=document.getElementById("previousVal");
+var preview=document.getElementById("previewArc"),reticle=document.getElementById("reticle"),reticle2=document.getElementById("reticle2");
+var reticleLabel=document.getElementById("reticleLabel"),rangeLabel=document.getElementById("rangeLabel");
+var barrel=document.getElementById("barrel"),gun=document.getElementById("gun"),muzzlePuff=document.getElementById("muzzlePuff");
+var shell=document.getElementById("shell"),liveTrail=document.getElementById("liveTrail"),impact=document.getElementById("impact");
+var history=document.getElementById("history"),status=document.getElementById("status"),fire=document.getElementById("fire");
+var targetShip=document.getElementById("targetShip"),targetName=document.getElementById("targetName"),chartTitle=document.getElementById("chartTitle");
+var coast=document.getElementById("coast"),battleLog=document.getElementById("battleLog"),volleyNote=document.getElementById("volleyNote");
 
-  var origin={x:80,y:420};
-  var target={x:635,y:425,w:95,h:16};
-  var previous=null;
-  targetShip.setAttribute("transform","translate("+target.x+" "+target.y+")");
+var origin={x:82,y:452}, currentFront="north", volley=1;
+var fronts={
+ north:{label:"NORTH FRONT",shipX:682,shipY:456,history:[],hits:0,coast:"M0 463 C120 430 205 472 318 448 C438 421 520 443 606 432 C705 419 785 456 880 438 L880 590 L0 590Z"},
+ east:{label:"EAST FRONT",shipX:615,shipY:456,history:[],hits:0,coast:"M0 468 C155 440 250 457 350 438 C460 418 532 457 610 446 C710 431 791 398 880 427 L880 590 L0 590Z"},
+ south:{label:"SOUTH FRONT",shipX:748,shipY:456,history:[],hits:0,coast:"M0 451 C92 438 185 478 292 455 C389 434 478 420 565 448 C676 480 765 435 880 450 L880 590 L0 590Z"}
+};
 
-  function solution(){
-    var deg=+angle.value, p=+power.value;
-    var rad=deg*Math.PI/180;
-    var range=(p/100)*760*Math.sin(rad*2);
-    var x=Math.max(110,Math.min(760,origin.x+range));
-    var apex=Math.max(90,origin.y-(p*3.1*Math.sin(rad)));
-    var inRange=x>=540;
-    return {deg:deg,p:p,x:x,y:425,apex:apex,inRange:inRange};
-  }
+function solution(){
+ var deg=+angle.value,p=+power.value,rad=deg*Math.PI/180;
+ var range=(p/100)*820*Math.sin(rad*2);
+ var x=Math.max(115,Math.min(835,origin.x+range));
+ var apex=Math.max(75,origin.y-(p*3.45*Math.sin(rad)));
+ return {deg:deg,p:p,x:x,y:456,apex:apex,inRange:x>=555};
+}
+function pathFor(s){var cx=(origin.x+s.x)/2;return "M "+origin.x+" "+origin.y+" Q "+cx+" "+s.apex+" "+s.x+" "+s.y}
+function sectorFromX(x){var idx=Math.max(0,Math.min(9,Math.floor((x-555)/29)));return String.fromCharCode(65+idx)+"8"}
+function pointOnQuad(t,x0,y0,cx,cy,x1,y1){var a=(1-t)*(1-t),b=2*(1-t)*t,c=t*t;return{x:a*x0+b*cx+c*x1,y:a*y0+b*cy+c*y1}}
 
-  function sectorFromX(x){
-    var idx=Math.max(0,Math.min(9,Math.floor((x-500)/28)));
-    return String.fromCharCode(65+idx)+"8";
-  }
+function update(){
+ var s=solution();
+ angleVal.textContent=s.deg+"°";powerVal.textContent=s.p+"%";
+ rangeVal.textContent=Math.round(s.x-origin.x)+" units";sectorVal.textContent=sectorFromX(s.x);
+ guideVal.textContent=s.inRange?"IN RANGE":"SHORT";guideVal.style.color=s.inRange?"#54775c":"#aa3f36";
+ preview.setAttribute("d",pathFor(s));
+ [reticle,reticle2].forEach(function(r){r.setAttribute("cx",s.x);r.setAttribute("cy",s.y)});
+ reticle.setAttribute("rx",s.inRange?37:48);reticle.setAttribute("ry",s.inRange?20:25);
+ reticle2.setAttribute("rx",s.inRange?30:40);reticle2.setAttribute("ry",s.inRange?16:21);
+ reticleLabel.setAttribute("x",s.x-39);reticleLabel.setAttribute("y",s.y-31);
+ rangeLabel.textContent=s.inRange?"":"SHORT";rangeLabel.setAttribute("x",s.x-18);rangeLabel.setAttribute("y",s.y+42);
+ var brad=-s.deg*Math.PI/180;barrel.setAttribute("x2",72*Math.cos(brad));barrel.setAttribute("y2",72*Math.sin(brad));
+}
 
-  function pathFor(s){
-    var cx=(origin.x+s.x)/2;
-    return "M "+origin.x+" "+origin.y+" Q "+cx+" "+s.apex+" "+s.x+" "+s.y;
-  }
+function renderHistory(){
+ history.innerHTML="";
+ var arr=fronts[currentFront].history;
+ arr.forEach(function(h){
+   var p=document.createElementNS(NS,"path");p.setAttribute("d",h.path);p.setAttribute("fill","none");p.setAttribute("stroke","#163a61");p.setAttribute("stroke-opacity",".15");p.setAttribute("stroke-width","2");p.setAttribute("stroke-dasharray","5 7");history.appendChild(p);
+   var g=document.createElementNS(NS,"g");g.setAttribute("transform","translate("+h.x+" "+h.y+")");
+   if(h.hit){var a=document.createElementNS(NS,"path");a.setAttribute("d","M-12 -12 L12 12 M12 -12 L-12 12");a.setAttribute("stroke","#aa3f36");a.setAttribute("stroke-width","3");a.setAttribute("stroke-opacity",".8");g.appendChild(a)}
+   else{var c=document.createElementNS(NS,"circle");c.setAttribute("r","9");c.setAttribute("fill","none");c.setAttribute("stroke","#496f95");c.setAttribute("stroke-width","2");c.setAttribute("stroke-opacity",".55");g.appendChild(c)}
+   history.appendChild(g);
+ });
+ var last=arr.length?arr[arr.length-1]:null;
+ previousVal.textContent=last?(last.deg+"° / "+last.p+"% → "+sectorFromX(last.x)):"—";
+}
 
-  function update(){
-    var s=solution();
-    angleVal.textContent=s.deg+"°";
-    powerVal.textContent=s.p+"%";
-    rangeVal.textContent=Math.round(s.x-origin.x)+" units";
-    sectorVal.textContent=sectorFromX(s.x);
-    guideVal.textContent=s.inRange?"IN RANGE":"SHORT";
-    guideVal.style.color=s.inRange?"#4f765d":"#a43c33";
+function setFront(front){
+ if(!fronts[front]||fire.disabled)return;
+ currentFront=front;
+ document.querySelectorAll("[data-front]").forEach(function(el){el.classList.toggle("active",el.getAttribute("data-front")===front)});
+ targetName.textContent=fronts[front].label;chartTitle.textContent=fronts[front].label.replace(" FRONT","")+" THEATER";
+ coast.setAttribute("d",fronts[front].coast);targetShip.setAttribute("transform","translate("+fronts[front].shipX+" "+fronts[front].shipY+")");
+ targetShip.setAttribute("opacity",fronts[front].hits?"1":"0");
+ status.textContent="Plotting against "+fronts[front].label+".";
+ renderHistory();update();
+}
 
-    preview.setAttribute("d",pathFor(s));
-    reticle.setAttribute("cx",s.x);
-    reticle.setAttribute("cy",s.y);
-    reticle.setAttribute("rx",s.inRange?34:44);
-    reticle.setAttribute("ry",s.inRange?18:22);
-    reticle.setAttribute("stroke-opacity",s.inRange?".48":".25");
-    reticleLabel.setAttribute("x",s.x-36);
-    reticleLabel.setAttribute("y",s.y-28);
-    rangeLabel.textContent=s.inRange?"":"SHORT";
-    rangeLabel.setAttribute("x",s.x-18);
-    rangeLabel.setAttribute("y",s.y+38);
+function recoil(){
+ gun.setAttribute("transform","translate(75 455)");muzzlePuff.setAttribute("opacity","1");
+ setTimeout(function(){gun.setAttribute("transform","translate(82 452)");muzzlePuff.setAttribute("opacity","0")},145);
+}
+function addLog(msg){battleLog.innerHTML=msg+"<br>"+battleLog.innerHTML}
+function updateIntel(){
+ ["north","east","south"].forEach(function(f){
+   var el=document.getElementById("intel"+f.charAt(0).toUpperCase()+f.slice(1));
+   el.textContent=fronts[f].hits?("INTEL: "+fronts[f].hits+" confirmed hit"+(fronts[f].hits===1?"":"s")):"INTEL: no confirmed hits";
+ });
+}
+function botResolution(){
+ var names=["NORTH","EAST","SOUTH"],parts=[];
+ names.forEach(function(n){
+   var outcome=Math.random()<.28?"HIT":"MISS";
+   parts.push(n+" → "+outcome);
+ });
+ addLog("ENEMY VOLLEY: "+parts.join(" / "));
+ volley++;
+ volleyNote.textContent="VOLLEY "+volley+" • select target front";
+}
 
-    var brad=-s.deg*Math.PI/180;
-    barrel.setAttribute("x2",68*Math.cos(brad));
-    barrel.setAttribute("y2",68*Math.sin(brad));
-  }
+function shoot(){
+ fire.disabled=true;
+ var s=solution(),f=fronts[currentFront],cx=(origin.x+s.x)/2;
+ shell.setAttribute("opacity","1");liveTrail.setAttribute("d","");impact.setAttribute("opacity","0");
+ status.textContent="ORDERS LOCKED — SHOT AWAY";volleyNote.textContent="VOLLEY "+volley+" • ORDERS LOCKED";
+ recoil();
+ var start=performance.now(),duration=1250,trail=[];
+ function frame(now){
+  var t=Math.min(1,(now-start)/duration),pt=pointOnQuad(t,origin.x,origin.y,cx,s.apex,s.x,s.y);
+  shell.setAttribute("cx",pt.x);shell.setAttribute("cy",pt.y);trail.push(pt);if(trail.length>20)trail.shift();
+  var d="";trail.forEach(function(q,i){d+=(i?" L ":"M ")+q.x+" "+q.y});liveTrail.setAttribute("d",d);
+  if(t<1){requestAnimationFrame(frame);return}
+  shell.setAttribute("opacity","0");liveTrail.setAttribute("d","");
+  impact.setAttribute("transform","translate("+s.x+" "+s.y+")");impact.setAttribute("opacity","1");
+  var hit=s.x>=f.shipX&&s.x<=f.shipX+102;
+  f.history.push({path:pathFor(s),x:s.x,y:s.y,hit:hit,deg:s.deg,p:s.p});if(f.history.length>6)f.history.shift();
+  if(hit){f.hits++;targetShip.setAttribute("opacity","1");status.textContent="DIRECT HIT — "+f.label+" marked";addLog("WEST → "+f.label+": HIT at "+sectorFromX(s.x))}
+  else if(s.inRange){status.textContent="MISS — mark it and correct";addLog("WEST → "+f.label+": MISS at "+sectorFromX(s.x))}
+  else{status.textContent="SHORT — adjust firing solution";addLog("WEST → "+f.label+": SHORT")}
+  renderHistory();updateIntel();
+  setTimeout(function(){impact.setAttribute("opacity",".25");botResolution();fire.disabled=false},520);
+ }
+ requestAnimationFrame(frame);
+}
 
-  function pointOnQuad(t,x0,y0,cx,cy,x1,y1){
-    var a=(1-t)*(1-t),b=2*(1-t)*t,c=t*t;
-    return {x:a*x0+b*cx+c*x1,y:a*y0+b*cy+c*y1};
-  }
-
-  function addHistory(s,hit){
-    var ns="http://www.w3.org/2000/svg";
-    var p=document.createElementNS(ns,"path");
-    p.setAttribute("d",pathFor(s));
-    p.setAttribute("fill","none");
-    p.setAttribute("stroke","#17395f");
-    p.setAttribute("stroke-opacity",".16");
-    p.setAttribute("stroke-width","2");
-    p.setAttribute("stroke-dasharray","5 7");
-    history.appendChild(p);
-
-    var g=document.createElementNS(ns,"g");
-    g.setAttribute("transform","translate("+s.x+" "+s.y+")");
-    if(hit){
-      var a=document.createElementNS(ns,"path");
-      a.setAttribute("d","M-12 -12 L12 12 M12 -12 L-12 12");
-      a.setAttribute("stroke","#a43c33");
-      a.setAttribute("stroke-width","3");
-      a.setAttribute("stroke-opacity",".72");
-      g.appendChild(a);
-    }else{
-      var c=document.createElementNS(ns,"circle");
-      c.setAttribute("cx","0");c.setAttribute("cy","0");c.setAttribute("r","9");
-      c.setAttribute("fill","none");c.setAttribute("stroke","#42678f");
-      c.setAttribute("stroke-width","2");c.setAttribute("stroke-opacity",".55");
-      g.appendChild(c);
-    }
-    history.appendChild(g);
-
-    while(history.childNodes.length>10)history.removeChild(history.firstChild);
-  }
-
-  function recoil(){
-    gun.setAttribute("transform","translate(74 423)");
-    muzzlePuff.setAttribute("opacity","1");
-    setTimeout(function(){
-      gun.setAttribute("transform","translate(80 420)");
-      muzzlePuff.setAttribute("opacity","0");
-    },140);
-  }
-
-  function shoot(){
-    fire.disabled=true;
-    var s=solution();
-    var cx=(origin.x+s.x)/2;
-    shell.setAttribute("opacity","1");
-    liveTrail.setAttribute("d","");
-    impact.setAttribute("opacity","0");
-    status.textContent="SHOT AWAY…";
-    recoil();
-
-    var start=performance.now(),duration=1200;
-    var trailPoints=[];
-    function frame(now){
-      var t=Math.min(1,(now-start)/duration);
-      var pt=pointOnQuad(t,origin.x,origin.y,cx,s.apex,s.x,s.y);
-      shell.setAttribute("cx",pt.x);
-      shell.setAttribute("cy",pt.y);
-      trailPoints.push(pt);
-      if(trailPoints.length>18)trailPoints.shift();
-      var d="";
-      for(var i=0;i<trailPoints.length;i++)d+=(i?" L ":"M ")+trailPoints[i].x+" "+trailPoints[i].y;
-      liveTrail.setAttribute("d",d);
-
-      if(t<1){requestAnimationFrame(frame);return}
-
-      shell.setAttribute("opacity","0");
-      liveTrail.setAttribute("d","");
-      impact.setAttribute("transform","translate("+s.x+" "+s.y+")");
-      impact.setAttribute("opacity","1");
-
-      var hit=s.x>=target.x && s.x<=target.x+target.w;
-      addHistory(s,hit);
-      previous=s;
-      previousVal.textContent=s.deg+"° / "+s.p+"% → "+sectorFromX(s.x);
-
-      if(hit){
-        targetShip.setAttribute("opacity","1");
-        status.textContent="HIT — walk the next shot onto target";
-      }else if(s.inRange){
-        status.textContent="MISS — correct from the last impact";
-      }else{
-        status.textContent="SHORT — increase power or alter angle";
-      }
-
-      setTimeout(function(){impact.setAttribute("opacity",".3")},300);
-      fire.disabled=false;
-    }
-    requestAnimationFrame(frame);
-  }
-
-  angle.addEventListener("input",update);
-  power.addEventListener("input",update);
-  fire.addEventListener("click",shoot);
-  update();
+document.querySelectorAll("[data-front]").forEach(function(el){
+ el.addEventListener("click",function(){setFront(this.getAttribute("data-front"))});
+});
+angle.addEventListener("input",update);power.addEventListener("input",update);fire.addEventListener("click",shoot);
+setFront("north");
 })();
 </script>
 </body>
