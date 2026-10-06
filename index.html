@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.3 — Fleet Damage</title>
+<title>Graph War V0.10.4 — Fleet Damage Polish</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -58,8 +58,8 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.3 FLEET DAMAGE</span></h1>
-      <div class="sub">Fleet attrition is now visible: reveal enemy ships through hits, track persistent damage, and survive a less brutal return-fire cadence.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.4 FLEET DAMAGE</span></h1>
+      <div class="sub">Fleet attrition with stronger visual history: contacts reveal under fire, damaged hulls flare, critical ships smoke, and sunk ships stay crossed off.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -560,9 +560,15 @@ function resolveShot(sol){
     var missDistance=Math.hypot(x-target.x,z-target.z);
     if(missDistance<=target.r){
       kind="hit";
-      damageEnemyShip(currentFront);
-      status.textContent="DIRECT HIT — enemy fleet damaged.";
-      flash("DIRECT HIT");
+      var damageResult=damageEnemyShip(currentFront);
+      if(damageResult&&damageResult.ship){
+        var struckShip=damageResult.ship;
+        var stateAfter=shipState(struckShip).toUpperCase();
+        status.textContent="DIRECT HIT — "+(damageResult.wasHidden?"CONTACT REVEALED · ":"")+struckShip.name+" "+stateAfter+".";
+      }else{
+        status.textContent="DIRECT HIT — enemy fleet damaged.";
+      }
+      flash(damageResult&&damageResult.wasHidden?"CONTACT!":"DIRECT HIT");
     }else{
       kind="miss";
       status.textContent=x>100?"LONG — shot left the chart.":"SPLASH — correct from the mark.";
@@ -617,9 +623,13 @@ function frontEliminated(front){
 function damageEnemyShip(front){
   var fleet=profiles[front].fleet;
   var ship=fleet.find(function(s){return s.hp>0;});
-  if(!ship)return;
+  if(!ship)return null;
+  var wasHidden=!ship.revealed;
   ship.revealed=true;
   ship.hp=Math.max(0,ship.hp-1);
+  ship.justHit=true;
+  setTimeout(function(){ship.justHit=false;renderFleets();},900);
+  return{ship:ship,wasHidden:wasHidden};
 }
 function damageWestShip(){
   var alive=westFleet.filter(function(ship){return ship.hp>0;});
@@ -767,10 +777,13 @@ function shipState(ship){
 }
 function shipMarkup(ship,isEnemy){
   var state=shipState(ship);
-  var label=isEnemy&&!ship.revealed&&state==="intact"?"?":ship.code;
+  var hidden=isEnemy&&!ship.revealed&&state==="intact";
+  var label=hidden?"?":ship.code;
   var pips="";
   for(var i=0;i<ship.max;i++)pips+='<i class="'+(i<ship.hp?"live":"lost")+'"></i>';
-  return '<span class="shipAvatar '+state+'" title="'+(ship.revealed||!isEnemy?ship.name:"Unknown contact")+'"><b>'+label+'</b><span class="hull"></span><span class="pips">'+pips+'</span></span>';
+  var classes="shipAvatar "+state+(hidden?" contact":" revealed")+(ship.justHit?" justHit":"");
+  var fx=state==="critical"?'<span class="smoke">••</span>':(state==="sunk"?'<span class="wreck">×</span>':(state==="damaged"?'<span class="scar">／</span>':""));
+  return '<span class="'+classes+'" title="'+(hidden?"Unknown contact":ship.name+" · "+state)+'"><b>'+label+'</b><span class="hull">'+fx+'</span><span class="pips">'+pips+'</span><span class="stateText">'+(hidden?"CONTACT":state.toUpperCase())+'</span></span>';
 }
 function renderFleets(){
   ["north","east","south"].forEach(function(front){
@@ -921,17 +934,29 @@ body.blueprint .status{background:#3b5363;border-color:#ff8a84}
 .frontCard strong{display:block;margin-top:2px;font-family:var(--display);font-size:20px;line-height:1;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
 .frontCard small{display:block;margin-top:5px;color:var(--muted);font-size:11px;line-height:1.3}
 .frontCard em{display:inline-block;margin-top:6px;padding:3px 6px;border-radius:999px;background:var(--chip);color:var(--ink2);font-style:normal;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
-.fleetStrip{display:flex;gap:5px;align-items:flex-end;margin-top:7px;min-height:31px}
-.shipAvatar{position:relative;display:inline-grid;grid-template-columns:auto 1fr;grid-template-rows:12px 8px;gap:1px 3px;align-items:center;min-width:43px;padding:2px 4px;border:1px solid var(--line);border-radius:5px;background:rgba(255,255,255,.18);color:var(--ink)}
-.shipAvatar b{font-family:var(--display);font-size:9px;line-height:1;letter-spacing:.05em}
-.shipAvatar .hull{position:relative;display:block;width:24px;height:6px;background:currentColor;clip-path:polygon(0 50%,18% 0,80% 0,100% 50%,78% 100%,15% 100%)}
-.shipAvatar .hull:after{content:"";position:absolute;left:9px;top:-3px;width:6px;height:3px;background:currentColor}
+.fleetStrip{display:flex;gap:6px;align-items:flex-end;margin-top:8px;min-height:41px}
+.shipAvatar{position:relative;display:inline-grid;grid-template-columns:auto 1fr;grid-template-rows:13px 9px 7px;gap:1px 4px;align-items:center;min-width:51px;padding:4px 5px 3px;border:1px solid var(--line);border-radius:6px;background:rgba(255,255,255,.22);color:var(--ink);overflow:visible;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,opacity .16s ease}
+.shipAvatar b{font-family:var(--display);font-size:10px;line-height:1;letter-spacing:.06em}
+.shipAvatar .hull{position:relative;display:block;width:28px;height:7px;background:currentColor;clip-path:polygon(0 50%,18% 0,80% 0,100% 50%,78% 100%,15% 100%)}
+.shipAvatar .hull:after{content:"";position:absolute;left:10px;top:-3px;width:7px;height:3px;background:currentColor}
 .shipAvatar .pips{grid-column:1 / span 2;display:flex;gap:2px}
-.shipAvatar .pips i{display:block;width:5px;height:3px;border-radius:1px;background:currentColor;opacity:.25}
-.shipAvatar .pips i.live{opacity:.9}.shipAvatar .pips i.lost{background:var(--red);opacity:.55}
-.shipAvatar.damaged{color:var(--accent);border-color:var(--accent)}
-.shipAvatar.critical{color:var(--red);border-color:var(--red);box-shadow:0 0 0 1px rgba(163,56,49,.08)}
-.shipAvatar.sunk{color:var(--muted);opacity:.38;text-decoration:line-through;transform:rotate(-3deg)}
+.shipAvatar .pips i{display:block;width:6px;height:3px;border-radius:1px;background:currentColor;opacity:.22}
+.shipAvatar .pips i.live{opacity:.95}.shipAvatar .pips i.lost{background:var(--red);opacity:.72}
+.shipAvatar .stateText{grid-column:1 / span 2;font-size:6px;font-weight:800;line-height:1;letter-spacing:.11em;opacity:.58}
+.shipAvatar.contact{border-style:dashed;opacity:.76}
+.shipAvatar.contact .hull{opacity:.55}
+.shipAvatar.revealed{box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.shipAvatar.damaged{color:var(--accent);border-color:var(--accent);background:rgba(207,127,59,.10)}
+.shipAvatar.critical{color:var(--red);border-color:var(--red);background:rgba(163,56,49,.11);box-shadow:0 0 0 1px rgba(163,56,49,.10),0 0 10px rgba(163,56,49,.14);animation:criticalPulse 1.45s ease-in-out infinite}
+.shipAvatar.sunk{color:var(--muted);opacity:.42;transform:rotate(-4deg);border-style:dashed;filter:grayscale(.65)}
+.shipAvatar.sunk:after{content:"";position:absolute;left:3px;right:3px;top:50%;height:2px;background:var(--red);transform:rotate(-14deg);opacity:.85}
+.shipAvatar.justHit{animation:shipHit .85s ease-out}
+.shipAvatar .scar{position:absolute;left:9px;top:-5px;color:var(--red);font-size:15px;font-weight:900;line-height:1;transform:rotate(18deg);text-shadow:0 0 2px var(--panel)}
+.shipAvatar .smoke{position:absolute;right:-5px;top:-12px;color:var(--muted);font-size:10px;letter-spacing:-2px;opacity:.8;animation:smokeDrift 1.5s ease-in-out infinite}
+.shipAvatar .wreck{position:absolute;left:8px;top:-6px;color:var(--red);font-size:15px;font-weight:900;line-height:1}
+@keyframes shipHit{0%{transform:scale(1);box-shadow:0 0 0 rgba(0,0,0,0)}20%{transform:scale(1.12) rotate(-2deg);box-shadow:0 0 16px rgba(163,56,49,.45)}100%{transform:scale(1);}}
+@keyframes criticalPulse{0%,100%{box-shadow:0 0 0 1px rgba(163,56,49,.10),0 0 7px rgba(163,56,49,.10)}50%{box-shadow:0 0 0 1px rgba(163,56,49,.22),0 0 14px rgba(163,56,49,.26)}}
+@keyframes smokeDrift{0%,100%{transform:translate(0,1px);opacity:.45}50%{transform:translate(2px,-3px);opacity:.9}}
 body.blueprint .shipAvatar{background:rgba(8,25,38,.35)}
 body.warroom .shipAvatar{background:rgba(255,248,220,.28)}
 .globeMark{
