@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.9.3 — UI Art Direction</title>
+<title>Graph War V0.9.4 — Theme Contrast Pass</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -21,34 +21,34 @@ h1{margin:0;color:var(--ink);font-family:var(--display);font-size:44px;line-heig
 .theme{display:flex;align-items:center;gap:10px;color:var(--ink);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
 .theme select{min-height:42px;padding:8px 12px;border:1.5px solid var(--ink2);border-radius:6px;background:var(--panel);color:var(--ink);font-size:14px;font-weight:600;text-transform:none;letter-spacing:0}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px}
-.stage{position:relative;min-height:720px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--paper);box-shadow:0 5px 16px rgba(30,40,48,.10)}
+.stage{position:relative;min-height:720px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--paper);box-shadow:0 5px 16px rgba(30,40,48,.10),inset 0 0 0 1px rgba(255,255,255,.12)}
 #scene{display:block;width:100%;height:720px}
 .hud{position:absolute;inset:14px 16px auto 16px;display:flex;justify-content:space-between;gap:16px;pointer-events:none;color:var(--ink);font-family:var(--display);font-size:18px;line-height:1.15;font-weight:700;letter-spacing:.05em;text-transform:uppercase;text-shadow:0 1px 0 var(--paper)}
 .hud span{display:inline-block;margin-top:4px;font-family:var(--ui);font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.06em}
 .callout{position:absolute;left:50%;top:14%;transform:translateX(-50%);font-family:var(--display);font-size:46px;line-height:1;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--red);text-shadow:0 2px 0 var(--paper);opacity:0;pointer-events:none}
 .callout.show{animation:pop .9s ease-out}
 @keyframes pop{0%{opacity:0;transform:translateX(-50%) scale(.8)}15%{opacity:1;transform:translateX(-50%) scale(1.08)}70%{opacity:1}100%{opacity:0}}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden;box-shadow:0 8px 20px rgba(30,40,48,.10)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden;box-shadow:0 8px 20px rgba(30,40,48,.14),inset 0 0 0 1px rgba(255,255,255,.10)}
 .panel h2{margin:0;color:var(--ink);font-family:var(--display);font-size:28px;line-height:1;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
 .kicker{margin:6px 0 0;color:var(--red);font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
 .control{margin:18px 0}
 label{display:flex;justify-content:space-between;align-items:baseline;color:var(--ink);font-size:14px;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em}
 input[type=range]{width:100%;height:30px}
-.fire{width:100%;min-height:58px;border:0;border-radius:7px;background:var(--ink);color:var(--panel);font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;box-shadow:inset 0 -3px 0 rgba(0,0,0,.16)}
+.fire{width:100%;min-height:58px;border:1px solid color-mix(in srgb,var(--ink) 80%,black);border-radius:7px;background:var(--ink);color:var(--panel);font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),0 2px 0 rgba(0,0,0,.08)}
 .fire:disabled{opacity:.45}
 .readout{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px;padding:0;border:0;background:transparent;font-size:13px;line-height:1.35}
-.readout .metric{padding:11px 12px;border:1px solid var(--line);border-radius:7px;background:rgba(255,255,255,.20)}.readout .metric span{display:block;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}.readout strong{display:block;margin-top:3px;color:var(--ink);font-size:15px;font-weight:750}
+.readout .metric{padding:11px 12px;border:1px solid var(--line);border-radius:7px;background:rgba(255,255,255,.30);box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}.readout .metric span{display:block;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}.readout strong{display:block;margin-top:3px;color:var(--ink);font-size:15px;font-weight:750}
 .status{margin-top:14px;padding:13px 14px;border:1px solid rgba(163,56,49,.38);border-left:5px solid var(--red);border-radius:7px;background:rgba(163,56,49,.07);color:var(--red);font-weight:700;font-size:14px;line-height:1.4;text-align:left;min-height:54px}
 .note{margin-top:16px;color:var(--muted);font-size:13px;line-height:1.55}
 .legend{margin-top:16px;padding-top:13px;border-top:1px solid var(--line);color:var(--ink2);font-size:12px;line-height:1.55}
-body.blueprint{--page:#071725;--panel:#0e2a41;--paper:#0c263b;--ink:#b2e7ff;--ink2:#69c8f0;--red:#ff8079;--muted:#9dbfce;--line:#2b5e7b;--button:#133a57;--display:"Rajdhani","Arial Narrow",sans-serif;--ui:"IBM Plex Sans",system-ui,sans-serif;color:#eaf8ff}
-body.warroom{--page:#4c5044;--panel:#ddd6ba;--paper:#d6cfb2;--ink:#213722;--ink2:#4f684f;--red:#8b342e;--muted:#5d655a;--line:#8f8a72;--button:#c8c1a5;--display:"Oswald","Arial Narrow",sans-serif;--ui:"IBM Plex Sans",system-ui,sans-serif}
-body:not(.blueprint):not(.warroom){--display:"Barlow Condensed","Arial Narrow",sans-serif}
-.panelHead{padding:18px 20px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,0))}
+body.blueprint{--page:#06131f;--panel:#0f2e47;--paper:#0b2538;--ink:#c4efff;--ink2:#6ed3ff;--red:#ff746e;--muted:#a7c7d5;--line:#356984;--button:#153d5a;--chip:#123b55;--display:"Rajdhani","Arial Narrow",sans-serif;--ui:"IBM Plex Sans",system-ui,sans-serif;color:#eaf8ff}
+body.warroom{--page:#353b33;--panel:#ece4c8;--paper:#ddd4b8;--ink:#172919;--ink2:#3d583f;--red:#8f2f2a;--muted:#4f5a50;--line:#77745d;--button:#b9b393;--chip:#c9c2a3;--display:"Oswald","Arial Narrow",sans-serif;--ui:"IBM Plex Sans",system-ui,sans-serif}
+body:not(.blueprint):not(.warroom){--display:"Barlow Condensed","Arial Narrow",sans-serif;--chip:#e7edf1}
+.panelHead{padding:18px 20px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.02))}
 .panelBody{padding:18px 20px 20px}
 .dashTitle{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.stateChip{padding:5px 8px;border:1px solid var(--line);border-radius:999px;background:var(--chip);color:var(--ink2);font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap}
-body.blueprint .stateChip{background:#123a54;color:#8ed9ff}body.warroom .stateChip{background:#c4bea5;color:#405440}
+.stateChip{padding:5px 8px;border:1px solid var(--line);border-radius:999px;background:var(--chip);color:var(--ink2);font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}body.warroom .stateChip{background:#c5bd9e;color:#263d28;border-color:#756f59}
 @media(max-width:900px){
   .top{align-items:flex-start;flex-direction:column}.layout{grid-template-columns:1fr}.stage{min-height:560px}#scene{height:560px}.panel{padding:16px}
 }
@@ -58,8 +58,8 @@ body.blueprint .stateChip{background:#123a54;color:#8ed9ff}body.warroom .stateCh
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.9.3 UI PASS</span></h1>
-      <div class="sub">2.5D artillery with a more distinctive tactical dashboard and theme-specific visual language.</div>
+      <h1>GRAPH WAR <span class="version">V0.9.4 CONTRAST PASS</span></h1>
+      <div class="sub">2.5D artillery with stronger theme separation, clearer values, and improved War Room contrast.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -168,8 +168,8 @@ var ridge=[
 
 var palettes={
   notebook:{bg:"#f7f1e4",board:"#edf5f6",grid:"rgba(49,112,158,.25)",ink:"#12375d",red:"#a33831",top:"#cfc6a9",side:"#aaa085",shadow:"rgba(20,30,38,.16)"},
-  blueprint:{bg:"#0c263b",board:"#103149",grid:"rgba(115,211,255,.25)",ink:"#b2e7ff",red:"#ff8079",top:"#24506b",side:"#173c53",shadow:"rgba(0,0,0,.28)"},
-  warroom:{bg:"#d6cfb2",board:"#cbc8ac",grid:"rgba(45,76,45,.22)",ink:"#213722",red:"#8b342e",top:"#9d9d78",side:"#74755a",shadow:"rgba(40,40,30,.18)"}
+  blueprint:{bg:"#0b2538",board:"#123750",grid:"rgba(125,219,255,.30)",ink:"#c4efff",red:"#ff746e",top:"#285975",side:"#173c53",shadow:"rgba(0,0,0,.32)"},
+  warroom:{bg:"#ddd4b8",board:"#eee6c9",grid:"rgba(42,72,43,.30)",ink:"#172919",red:"#8f2f2a",top:"#a7a17c",side:"#74755a",shadow:"rgba(28,34,25,.24)"}
 };
 var pal=palettes.notebook;
 
@@ -494,3 +494,23 @@ requestAnimationFrame(frame);
 </script>
 </body>
 </html>
+<style>
+body.warroom .top{padding:4px 8px 0}
+body.warroom .panelHead{background:linear-gradient(180deg,#e8dfbf 0%,#ddd4b8 100%)}
+body.warroom .panelBody{background:#ece4c8}
+body.warroom .readout .metric{background:#f4ecd2;border-color:#7a765f}
+body.warroom .status{background:#f4e5d5;border-color:#9b4a43;border-left-color:var(--red)}
+body.warroom .theme select{background:#f2ead0}
+body.warroom .fire{background:#1f3521;color:#f3ecd6;border-color:#122214}
+body.warroom .stage{border-color:#72705b}
+body.warroom .hud{color:#142717;text-shadow:0 1px 0 #e9dfc1}
+body.warroom .hud span{color:#455446}
+body.warroom .sub{color:#d7dfd1}
+body.warroom h1{color:#182d1b}
+body.warroom .version{background:#d5ccb0;border-color:#76715b;color:#354b36}
+body.blueprint .panelHead{background:linear-gradient(180deg,#153a55 0%,#102f48 100%)}
+body.blueprint .panelBody{background:#0f2e47}
+body.blueprint .readout .metric{background:#163d58;border-color:#3b6f88}
+body.blueprint .fire{background:#9be4ff;color:#0a2638;border-color:#62c6ed}
+body.blueprint .status{background:#3b5363;border-color:#ff8a84}
+</style>
