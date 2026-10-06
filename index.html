@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.1 — Return Fire</title>
+<title>Graph War V0.10.2 — Bearing Aiming</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -22,7 +22,7 @@ h1{margin:0;color:var(--ink);font-family:var(--display);font-size:44px;line-heig
 .theme select{min-height:42px;padding:8px 12px;border:1.5px solid var(--ink2);border-radius:6px;background:var(--panel);color:var(--ink);font-size:14px;font-weight:600;text-transform:none;letter-spacing:0}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px}
 .stage{position:relative;min-height:720px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--paper);box-shadow:0 5px 16px rgba(30,40,48,.10),inset 0 0 0 1px rgba(255,255,255,.12)}
-#scene{display:block;width:100%;height:720px}
+#scene{display:block;width:100%;height:720px;cursor:crosshair;touch-action:none}
 .hud{position:absolute;inset:14px 16px auto 16px;display:flex;justify-content:space-between;gap:16px;pointer-events:none;color:var(--ink);font-family:var(--display);font-size:18px;line-height:1.15;font-weight:700;letter-spacing:.05em;text-transform:uppercase;text-shadow:0 1px 0 var(--paper)}
 .hud span{display:inline-block;margin-top:4px;font-family:var(--ui);font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.06em}
 .callout{position:absolute;left:50%;top:14%;transform:translateX(-50%);font-family:var(--display);font-size:48px;line-height:1;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--red);text-shadow:0 2px 0 var(--paper),0 0 18px rgba(163,56,49,.25);opacity:0;pointer-events:none}
@@ -58,8 +58,8 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.1 RETURN FIRE</span></h1>
-      <div class="sub">Four-front 2.5D artillery with return volleys: fire, take incoming rounds, assess damage, and replot.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.2 BEARING</span></h1>
+      <div class="sub">Three-axis artillery: drag across the tactical board to set bearing, then solve elevation and power through real 2.5D terrain.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -81,8 +81,8 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
   </section>
 
   <div class="layout">
-    <section class="stage">
-      <canvas id="scene"></canvas>
+    <section class="stage" id="stage">
+      <canvas id="scene" aria-label="2.5D tactical firing board. Drag across the board to set bearing."></canvas>
       <div class="hud">
         <div>East Theater · Ridge Pass<br><span id="orbitLabel">Camera: slow orbit</span></div>
         <div style="text-align:right">West Battery<br><span id="volleyLabel">Volley 1</span></div>
@@ -113,7 +113,7 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
       <button id="fire" class="fire">Lock & fire</button>
 
       <div class="readout">
-        <div class="metric"><span>Landing</span><strong id="rangeVal">—</strong></div>
+        <div class="metric"><span>Bearing</span><strong id="bearingVal">0°</strong></div><div class="metric"><span>Landing</span><strong id="rangeVal">—</strong></div>
         <div class="metric"><span>Flight path</span><strong id="pathVal">—</strong></div>
         <div class="metric"><span>Clearance</span><strong id="clearanceVal">—</strong></div>
         <div class="metric"><span>Previous</span><strong id="previousVal">—</strong></div>
@@ -121,10 +121,10 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 
       <div id="status" class="status">Adjust the shot. Clear the ridge or hit it.</div>
 
-      <div class="note" id="terrainNote">The reticle stays on the board plane. Each theater has a different raised obstacle profile and keeps its own shot history.</div>
+      <div class="note" id="terrainNote">Drag across the board to steer the firing bearing. Elevation and power control the arc and range; terrain can now be cleared vertically or flanked laterally.</div>
 
       <div class="legend">
-        Camera slows while aiming · X = direct hit · O = miss/obstacle.
+        Drag board = bearing · sliders = elevation/power · X = direct hit · O = miss/obstacle.
       </div>
       </div>
     </aside>
@@ -144,6 +144,7 @@ var theme=document.getElementById("theme");
 var angleVal=document.getElementById("angleVal");
 var powerVal=document.getElementById("powerVal");
 var rangeVal=document.getElementById("rangeVal");
+var bearingVal=document.getElementById("bearingVal");
 var pathVal=document.getElementById("pathVal");
 var clearanceVal=document.getElementById("clearanceVal");
 var previousVal=document.getElementById("previousVal");
@@ -214,6 +215,9 @@ var homeDamage=0;
 var homeMarks=[];
 var volley=1;
 var aimingUntil=0;
+var bearing=0;
+var cameraTheta=-.20;
+var draggingBearing=false;
 
 function currentObstacles(){return profiles[currentFront].obstacles;}
 
@@ -311,28 +315,42 @@ function solution(){
   var deg=Number(angle.value);
   var a=deg*Math.PI/180;
   var v=speed();
-  var vx=v*Math.cos(a);
+  var horizontalV=v*Math.cos(a);
   var vy=v*Math.sin(a);
+  var dirX=Math.cos(bearing);
+  var dirZ=Math.sin(bearing);
+  var vx=horizontalV*dirX;
+  var vz=horizontalV*dirZ;
   var totalT=(2*vy)/gravity;
   var landX=gun.x+vx*totalT;
+  var landZ=gun.z+vz*totalT;
   var collision=null;
 
-  for(var i=1;i<=220;i++){
-    var t=totalT*i/220;
+  for(var i=1;i<=260;i++){
+    var t=totalT*i/260;
     var x=gun.x+vx*t;
+    var z=gun.z+vz*t;
     var y=gun.y+vy*t-.5*gravity*t*t;
-    var h=ridgeHeightAt(x,gun.z);
+    var h=ridgeHeightAt(x,z);
     if(h>0&&y<=h){
-      collision={x:x,y:y,t:t,h:h};
+      collision={x:x,y:y,z:z,t:t,h:h};
       break;
     }
   }
 
-  return{deg:deg,power:Number(power.value),vx:vx,vy:vy,totalT:totalT,landX:landX,collision:collision};
+  return{
+    deg:deg,power:Number(power.value),bearing:bearing,
+    vx:vx,vy:vy,vz:vz,totalT:totalT,
+    landX:landX,landZ:landZ,collision:collision
+  };
 }
 
 function trajectoryPoint(sol,t){
-  return{x:gun.x+sol.vx*t,y:gun.y+sol.vy*t-.5*gravity*t*t,z:gun.z};
+  return{
+    x:gun.x+sol.vx*t,
+    y:gun.y+sol.vy*t-.5*gravity*t*t,
+    z:gun.z+sol.vz*t
+  };
 }
 
 function drawCircleOnPlane(x,z,r,color,theta,dashed){
@@ -419,7 +437,9 @@ function drawPreview(sol,theta){
   ctx.restore();
 
   var retX=Math.max(0,Math.min(100,sol.landX));
-  drawCircleOnPlane(retX,gun.z,4.5,sol.collision?pal.red:pal.ink,theta,true);
+  var retZ=Math.max(0,Math.min(100,sol.landZ));
+  line([gun.x,.12,gun.z],[retX,.12,retZ],pal.ink,1.25,theta,[5,7]);
+  drawCircleOnPlane(retX,retZ,4.5,sol.collision?pal.red:pal.ink,theta,true);
 }
 
 function incomingPoint(s,t){
@@ -506,14 +526,18 @@ function resolveShot(sol){
   var x;
   var kind;
 
+  var z;
   if(sol.collision){
     x=sol.collision.x;
+    z=sol.collision.z;
     kind="ridge";
     status.textContent="RIDGE STRIKE — raise the arc or change power.";
     flash("RIDGE STRIKE");
   }else{
     x=sol.landX;
-    if(Math.abs(x-target.x)<=target.r){
+    z=sol.landZ;
+    var missDistance=Math.hypot(x-target.x,z-target.z);
+    if(missDistance<=target.r){
       kind="hit";
       status.textContent="DIRECT HIT — target exposed.";
       flash("DIRECT HIT");
@@ -524,12 +548,17 @@ function resolveShot(sol){
     }
   }
 
-  history.push({x:Math.max(0,Math.min(100,x)),z:gun.z,kind:kind==="hit"?"hit":"miss",angle:sol.deg,power:sol.power});
+  history.push({
+    x:Math.max(0,Math.min(100,x)),
+    z:Math.max(0,Math.min(100,z)),
+    kind:kind==="hit"?"hit":"miss",
+    angle:sol.deg,power:sol.power,bearing:sol.bearing
+  });
   if(kind==="hit")profiles[currentFront].hits++;
   updateFrontIntel();
   if(history.length>9)history.shift();
 
-  previousVal.textContent=sol.deg+"° / "+sol.power+"% → "+(kind==="ridge"?"RIDGE":Math.round(x));
+  previousVal.textContent=formatBearing(sol.bearing)+" · "+sol.deg+"° / "+sol.power+"%";
   shot=null;
   updateReadout();
   setTimeout(beginReturnVolley,520);
@@ -615,20 +644,29 @@ function resolveIncoming(s){
   setTimeout(function(){runIncomingFront(order,next);},260);
 }
 
+function formatBearing(rad){
+  var deg=Math.round(rad*180/Math.PI);
+  if(Math.abs(deg)<1)return "0° CENTER";
+  return Math.abs(deg)+"° "+(deg<0?"N":"S");
+}
 function updateReadout(){
   var sol=solution();
   angleVal.textContent=sol.deg+"°";
   powerVal.textContent=sol.power+"%";
-  rangeVal.textContent=Math.round(sol.landX)+" units";
+  bearingVal.textContent=formatBearing(sol.bearing);
+  rangeVal.textContent=Math.round(Math.hypot(sol.landX-gun.x,sol.landZ-gun.z))+" units";
   pathVal.textContent=sol.collision?"BLOCKED":"CLEAR";
   pathVal.style.color=sol.collision?"var(--red)":"var(--ink)";
 
-  var obs=currentObstacles();
-  var testX=obs.length?((obs[0].x0+obs[0].x1)/2):51;
-  var testT=(testX-gun.x)/sol.vx;
-  var yAtRidge=gun.y+sol.vy*testT-.5*gravity*testT*testT;
-  var ridgeH=ridgeHeightAt(testX,gun.z);
-  clearanceVal.textContent=Math.round(yAtRidge-ridgeH)+" units";
+  var minClear=999;
+  var samples=160;
+  for(var i=1;i<=samples;i++){
+    var t=sol.totalT*i/samples;
+    var q=trajectoryPoint(sol,t);
+    var terrainH=ridgeHeightAt(q.x,q.z);
+    if(terrainH>0)minClear=Math.min(minClear,q.y-terrainH);
+  }
+  clearanceVal.textContent=minClear===999?"OPEN":Math.round(minClear)+" units";
 }
 
 function aimChanged(){
@@ -644,6 +682,7 @@ function aimChanged(){
 function frame(now){
   var orbitScale=now<aimingUntil ? .18 : 1;
   var theta=-.20+Math.sin(now/18000)*.18*orbitScale;
+  cameraTheta=theta;
 
   drawBoard(theta);
   drawRidge(theta);
@@ -668,6 +707,7 @@ function updateFrontIntel(){
 function switchFront(front){
   if(!profiles[front]||shot||returningFire)return;
   currentFront=front;
+  bearing=0;
   target=profiles[front].target;
   history=profiles[front].history;
   document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){
@@ -676,13 +716,54 @@ function switchFront(front){
   document.querySelector(".hud > div:first-child").childNodes[0].nodeValue=profiles[front].title;
   terrainLabel.textContent=profiles[front].label;
   terrainNote.textContent=profiles[front].note;
-  previousVal.textContent=history.length?(history[history.length-1].angle+"° / "+history[history.length-1].power+"%"):"—";
+  previousVal.textContent=history.length?(formatBearing(history[history.length-1].bearing||0)+" · "+history[history.length-1].angle+"° / "+history[history.length-1].power+"%"):"—";
   status.textContent="Targeting "+profiles[front].title+". Read the terrain and plot your shot.";
   updateReadout();
 }
 document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){
   btn.addEventListener("click",function(){switchFront(this.getAttribute("data-front"));});
 });
+
+function canvasToWorld(clientX,clientY){
+  var rect=canvas.getBoundingClientRect();
+  var sx=clientX-rect.left;
+  var sy=clientY-rect.top;
+  var rx=(sx-cssW/2)/(cssW/145);
+  var rz=(sy-cssH*.57)/(cssH/380);
+  var ct=Math.cos(cameraTheta);
+  var st=Math.sin(cameraTheta);
+  var dx=rx*ct+rz*st;
+  var dz=-rx*st+rz*ct;
+  return{x:dx+50,z:dz+50};
+}
+function setBearingFromPointer(clientX,clientY){
+  if(shot||returningFire)return;
+  var w=canvasToWorld(clientX,clientY);
+  var raw=Math.atan2(w.z-gun.z,w.x-gun.x);
+  var limit=30*Math.PI/180;
+  bearing=Math.max(-limit,Math.min(limit,raw));
+  aimingUntil=performance.now()+1200;
+  orbitLabel.textContent="Camera: bearing lock";
+  updateReadout();
+}
+canvas.addEventListener("pointerdown",function(e){
+  if(shot||returningFire)return;
+  draggingBearing=true;
+  canvas.setPointerCapture(e.pointerId);
+  setBearingFromPointer(e.clientX,e.clientY);
+});
+canvas.addEventListener("pointermove",function(e){
+  if(!draggingBearing)return;
+  setBearingFromPointer(e.clientX,e.clientY);
+});
+canvas.addEventListener("pointerup",function(e){
+  draggingBearing=false;
+  try{canvas.releasePointerCapture(e.pointerId);}catch(err){}
+  setTimeout(function(){
+    if(!shot&&!returningFire)orbitLabel.textContent="Camera: slow orbit";
+  },450);
+});
+canvas.addEventListener("pointercancel",function(){draggingBearing=false;});
 
 angle.addEventListener("input",aimChanged);
 power.addEventListener("input",aimChanged);
