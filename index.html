@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.4 — Fleet Damage Polish</title>
+<title>Graph War V0.10.5 — Oriented Battlefields</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -58,8 +58,8 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.4 FLEET DAMAGE</span></h1>
-      <div class="sub">Fleet attrition with stronger visual history: contacts reveal under fire, damaged hulls flare, critical ships smoke, and sunk ships stay crossed off.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.5 BATTLEFIELD</span></h1>
+      <div class="sub">Each theater now faces its real cardinal direction, while contacts, revealed ships, damage states, wrecks, and West fleet attrition live directly on the tactical board.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -168,7 +168,7 @@ var profiles={
   north:{
     title:"North Theater · Ice Shelf",
     label:"North terrain · Ice Shelf",
-    note:"Tall shelf walls force a high, disciplined arc. The central gap is narrow and punishes low power.",
+    note:"North faces up. Tall shelf walls force a high, disciplined arc, while revealed contacts and wrecks persist directly on the board.",
     target:{x:86,z:50,r:5},
     obstacles:[
       {x0:43,x1:50,z0:15,z1:35,h:25},
@@ -186,7 +186,7 @@ var profiles={
   east:{
     title:"East Theater · Ridge Pass",
     label:"East terrain · Ridge Pass",
-    note:"A staggered ridge divides the chart. Learn the clearance and walk shots through the broken high ground.",
+    note:"East faces right. A staggered ridge divides the chart; revealed contacts, damage, and wrecks persist around the firing solution.",
     target:{x:88,z:50,r:5},
     obstacles:[
       {x0:47,x1:55,z0:18,z1:35,h:12},
@@ -205,7 +205,7 @@ var profiles={
   south:{
     title:"South Theater · Dune Line",
     label:"South terrain · Dune Line",
-    note:"Low berms encourage flatter, longer shots. Too much loft wastes range; too little clips the dune line.",
+    note:"South faces down. Low berms encourage flatter, longer shots, with fleet damage and wrecks remaining visible on the battlefield.",
     target:{x:91,z:50,r:5},
     obstacles:[
       {x0:38,x1:46,z0:10,z1:38,h:8},
@@ -225,7 +225,33 @@ var westFleet=[
   {name:"Cruiser",code:"CA",hp:3,max:3,revealed:true},
   {name:"Carrier",code:"CV",hp:4,max:4,revealed:true}
 ];
-var target=profiles[currentFront].target;
+
+var fleetPositions={
+  north:[{x:83,z:32},{x:88,z:50},{x:82,z:70}],
+  east:[{x:83,z:31},{x:89,z:50},{x:84,z:70}],
+  south:[{x:84,z:30},{x:91,z:50},{x:84,z:72}]
+};
+var westPositions=[{x:16,z:36},{x:14,z:50},{x:16,z:65}];
+
+["north","east","south"].forEach(function(front){
+  profiles[front].fleet.forEach(function(ship,i){
+    ship.x=fleetPositions[front][i].x;
+    ship.z=fleetPositions[front][i].z;
+  });
+});
+westFleet.forEach(function(ship,i){
+  ship.x=westPositions[i].x;
+  ship.z=westPositions[i].z;
+});
+
+function activeEnemyShip(front){
+  return profiles[front].fleet.find(function(ship){return ship.hp>0;})||null;
+}
+function activeTarget(front){
+  var ship=activeEnemyShip(front);
+  return ship?{x:ship.x,z:ship.z,r:5}:null;
+}
+var target=activeTarget(currentFront);
 var gravity=75;
 var shot=null;
 var incomingShot=null;
@@ -239,6 +265,7 @@ var bearing=0;
 var cameraTheta=-.20;
 var draggingBearing=false;
 var lastAttackedFront="east";
+var theaterOrientation={east:0,north:-Math.PI/2,south:Math.PI/2};
 
 function currentObstacles(){return profiles[currentFront].obstacles;}
 
@@ -397,9 +424,92 @@ function drawGun(theta){
   ctx.fill();
 }
 
+function shipWorldSize(ship){
+  if(ship.code==="CV")return{len:10,w:3.4};
+  if(ship.code==="CA")return{len:8,w:2.9};
+  return{len:6,w:2.4};
+}
+function drawWorldShip(ship,theta,isEnemy){
+  var p=proj(ship.x,.7,ship.z,theta);
+  var state=shipState(ship);
+  var hidden=isEnemy&&!ship.revealed&&state==="intact";
+  if(hidden){
+    drawCircleOnPlane(ship.x,ship.z,5.4,"rgba(80,100,115,.46)",theta,true);
+    ctx.save();
+    ctx.fillStyle=pal.ink;
+    ctx.globalAlpha=.52;
+    ctx.font="700 15px "+getComputedStyle(document.body).getPropertyValue("--display");
+    ctx.textAlign="center";
+    ctx.fillText("?",p.x,p.y+5);
+    ctx.restore();
+    return;
+  }
+  var sz=shipWorldSize(ship);
+  var x0=ship.x-sz.len/2,x1=ship.x+sz.len/2;
+  var z0=ship.z-sz.w/2,z1=ship.z+sz.w/2;
+  var fill=state==="sunk"?"rgba(90,95,90,.28)":(state==="critical"?pal.red:(state==="damaged"?"#b66c32":pal.ink));
+  ctx.save();
+  ctx.globalAlpha=state==="sunk"?.48:.88;
+  poly([[x0,.6,ship.z],[x0+1,.6,z0],[x1-1,.6,z0],[x1,.6,ship.z],[x1-1,.6,z1],[x0+1,.6,z1]],fill,pal.ink,theta);
+  ctx.restore();
+
+  if(state==="damaged"||state==="critical"||state==="sunk"){
+    ctx.save();
+    ctx.strokeStyle=state==="sunk"?pal.red:"#d66a44";
+    ctx.lineWidth=state==="critical"?4:3;
+    ctx.beginPath();
+    ctx.moveTo(p.x-8,p.y-8);ctx.lineTo(p.x+8,p.y+8);
+    if(state==="sunk"){ctx.moveTo(p.x+8,p.y-8);ctx.lineTo(p.x-8,p.y+8);}
+    ctx.stroke();
+    ctx.restore();
+  }
+  if(state==="critical"){
+    ctx.save();
+    ctx.fillStyle=pal.red;
+    ctx.globalAlpha=.25+.18*Math.sin(performance.now()/180);
+    ctx.beginPath();ctx.arc(p.x,p.y,17,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=.62;
+    ctx.fillStyle=pal.ink;
+    ctx.beginPath();ctx.arc(p.x+7,p.y-16,4,0,Math.PI*2);ctx.arc(p.x+11,p.y-22,3,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.fillStyle=state==="sunk"?pal.red:pal.ink;
+  ctx.font="800 10px "+getComputedStyle(document.body).getPropertyValue("--ui");
+  ctx.textAlign="center";
+  ctx.fillText(ship.code,p.x,p.y-10);
+  ctx.restore();
+}
+function drawBattlefieldFleets(theta){
+  profiles[currentFront].fleet.forEach(function(ship){drawWorldShip(ship,theta,true);});
+  westFleet.forEach(function(ship){drawWorldShip(ship,theta,false);});
+}
 function drawTarget(theta){
-  var hit=history.some(function(h){return h.kind==="hit";});
-  drawCircleOnPlane(target.x,target.z,target.r,hit?pal.red:"rgba(160,60,50,.30)",theta,true);
+  if(!target)return;
+  var active=activeEnemyShip(currentFront);
+  var color=active&&active.revealed?pal.red:"rgba(160,60,50,.34)";
+  drawCircleOnPlane(target.x,target.z,target.r,color,theta,true);
+}
+function drawCompass(theta){
+  var cx=70,cy=cssH-64;
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.strokeStyle=pal.ink;ctx.fillStyle=pal.ink;ctx.globalAlpha=.82;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(0,0,23,0,Math.PI*2);ctx.stroke();
+  var labels=[
+    {t:"N",a:-Math.PI/2},{t:"E",a:0},{t:"S",a:Math.PI/2},{t:"W",a:Math.PI}
+  ];
+  ctx.font="800 11px "+getComputedStyle(document.body).getPropertyValue("--ui");
+  ctx.textAlign="center";ctx.textBaseline="middle";
+  labels.forEach(function(o){
+    ctx.globalAlpha=(o.t===currentFront.charAt(0).toUpperCase())?1:.42;
+    ctx.fillText(o.t,Math.cos(o.a)*32,Math.sin(o.a)*32);
+  });
+  ctx.globalAlpha=.9;
+  ctx.beginPath();ctx.moveTo(0,-17);ctx.lineTo(-5,-5);ctx.lineTo(5,-5);ctx.closePath();ctx.fill();
+  ctx.font="800 9px "+getComputedStyle(document.body).getPropertyValue("--ui");
+  ctx.fillText(currentFront.toUpperCase()+" THEATER",0,44);
+  ctx.restore();
 }
 
 function drawHomeMarks(theta){
@@ -557,8 +667,8 @@ function resolveShot(sol){
   }else{
     x=sol.landX;
     z=sol.landZ;
-    var missDistance=Math.hypot(x-target.x,z-target.z);
-    if(missDistance<=target.r){
+    var missDistance=target?Math.hypot(x-target.x,z-target.z):999;
+    if(target&&missDistance<=target.r){
       kind="hit";
       var damageResult=damageEnemyShip(currentFront);
       if(damageResult&&damageResult.ship){
@@ -628,6 +738,7 @@ function damageEnemyShip(front){
   ship.revealed=true;
   ship.hp=Math.max(0,ship.hp-1);
   ship.justHit=true;
+  if(front===currentFront)target=activeTarget(front);
   setTimeout(function(){ship.justHit=false;renderFleets();},900);
   return{ship:ship,wasHidden:wasHidden};
 }
@@ -752,15 +863,18 @@ function aimChanged(){
 
 function frame(now){
   var orbitScale=now<aimingUntil ? .18 : 1;
-  var theta=-.20+Math.sin(now/18000)*.18*orbitScale;
+  var facing=theaterOrientation[currentFront]||0;
+  var theta=facing+(-.12+Math.sin(now/18000)*.12*orbitScale);
   cameraTheta=theta;
 
   drawBoard(theta);
   drawRidge(theta);
   drawHistory(theta);
   drawHomeMarks(theta);
+  drawBattlefieldFleets(theta);
   drawGun(theta);
   drawTarget(theta);
+  drawCompass(theta);
   if(!returningFire)drawPreview(solution(),theta);
   drawShot(now,theta);
   drawIncomingShot(now,theta);
@@ -811,7 +925,7 @@ function switchFront(front){
   if(!profiles[front]||shot||returningFire)return;
   currentFront=front;
   bearing=0;
-  target=profiles[front].target;
+  target=activeTarget(front);
   history=profiles[front].history;
   document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){
     btn.classList.toggle("active",btn.getAttribute("data-front")===front);
