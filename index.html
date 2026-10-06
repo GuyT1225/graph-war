@@ -147,7 +147,7 @@ function cross(a,b){return V(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x)}
 function norm(a){var l=Math.hypot(a.x,a.y,a.z)||1;return V(a.x/l,a.y/l,a.z/l)}
 
 function camera(now){
- var damp=now<aimingUntil?.18:1;
+ var damp=now<aimingUntil ? .18 : 1;
  var phase=now/17000;
  var az=(-Math.PI/2)+(Math.sin(phase)*0.18*damp);
  var radius=155,cam=V(50+Math.cos(az)*radius,88,50+Math.sin(az)*radius);
