@@ -3,67 +3,399 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.3</title>
+<title>Graph War V0.4</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#eef3f7;color:#1d2939;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}main{max-width:900px;margin:auto;padding:14px}.small{font-size:13px;color:#667085}.paper{background:#fbfdff;background-image:linear-gradient(rgba(78,145,194,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(78,145,194,.16) 1px,transparent 1px);background-size:20px 20px;border:1px solid #bdd2e5;border-radius:14px;padding:14px;margin-top:12px}.row{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.btn{min-height:44px;padding:10px 14px;border:1px solid #bcc9d7;border-radius:10px;background:#fff;font-size:16px;font-weight:600}.primary{background:#dbeafe;border-color:#7da6e8}.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:1px;margin-top:12px}.cell{aspect-ratio:1;border:1px solid rgba(80,140,190,.24);background:rgba(255,255,255,.62);display:flex;align-items:center;justify-content:center;padding:0}.ship{background:rgba(49,59,70,.22)}.hit{font-weight:900}.miss{color:#667085}.target{outline:3px solid #2f6feb;outline-offset:-3px}.hidden{display:none!important}.fronts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.front{padding:12px;border:1px solid #ccd6e0;border-radius:10px;background:#fff}.active{background:#eef5ff;border-color:#7da6e8}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pill{border:1px solid #ccd6e0;border-radius:999px;padding:5px 9px;background:#fff;font-size:12px}.log{font-size:14px;max-height:220px;overflow:auto}.log div{padding:3px 0;border-bottom:1px solid #eef2f6}@media(max-width:700px){.two{grid-template-columns:1fr}}
+:root{
+  --paper:#f7f2e6;--paper2:#fbf8ef;--ink:#17395f;--ink2:#365b82;--grid:rgba(77,146,194,.18);
+  --red:#a33b32;--red2:#c45b4e;--green:#51765d;--muted:#6e756f;--line:#cbbf9f;--shadow:rgba(48,40,28,.10)
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  color:#243447;
+  font-family:"Courier New",ui-monospace,monospace;
+  background:
+    radial-gradient(circle at 20% 15%,rgba(255,255,255,.9),transparent 34%),
+    linear-gradient(#e9edf0,#e3e9ed);
+}
+button{font:inherit;color:inherit}
+main{max-width:1080px;margin:auto;padding:18px 14px 36px}
+.hidden{display:none!important}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+h1{margin:0;color:var(--ink);font-size:clamp(28px,5vw,46px);letter-spacing:-1.5px;transform:rotate(-.4deg)}
+.version{font-size:12px;font-weight:400;letter-spacing:0}
+.tag{font-size:12px;color:var(--muted);margin-top:4px}
+.note{font-size:12px;color:var(--ink2);font-style:italic}
+.paper{
+  position:relative;overflow:hidden;
+  background-color:var(--paper2);
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:20px 20px;
+  border:1px solid #c8bea6;border-radius:7px;
+  box-shadow:0 4px 12px var(--shadow);
+}
+.paper:after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(96deg,rgba(80,60,30,.025),transparent 28%,rgba(80,60,30,.02) 70%,transparent);
+  mix-blend-mode:multiply
+}
+.setup{padding:16px;margin-top:16px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.btn{
+  min-height:44px;padding:10px 14px;border:1px solid #9c8f73;border-radius:5px;
+  background:rgba(255,255,255,.52);cursor:pointer;font-weight:700;transform:rotate(-.15deg)
+}
+.btn:hover{background:rgba(255,255,255,.78)}
+.btn.primary{border:2px solid var(--ink);color:var(--ink);background:#edf5fb}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.pill{
+  display:inline-block;border:1px solid #9b9078;border-radius:999px;padding:5px 9px;
+  background:rgba(255,255,255,.52);font-size:11px
+}
+.war-status{font-size:12px;color:var(--red);font-weight:700;letter-spacing:.4px}
+.setup-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.theater-stage{margin-top:14px;display:grid;grid-template-columns:1fr 1.16fr 1fr;grid-template-areas:". north ." "west globe east" ". south .";gap:10px;align-items:center}
+.front-card{
+  min-height:90px;border:1px solid #b9ad91;border-radius:7px;background:rgba(255,255,255,.55);
+  padding:10px;cursor:pointer;text-align:center;position:relative;box-shadow:0 2px 6px rgba(60,45,30,.06)
+}
+.front-card.active{outline:2px solid var(--ink);background:#edf4f8;transform:rotate(-.5deg)}
+.front-card.eliminated{opacity:.35;text-decoration:line-through}
+.front-card .name{font-weight:800;color:var(--ink);letter-spacing:.5px}
+.front-card .meta{font-size:11px;color:var(--muted);margin-top:4px}
+#northCard{grid-area:north}#eastCard{grid-area:east}#southCard{grid-area:south}#westCard{grid-area:west}
+.globe-card{grid-area:globe;display:grid;place-items:center;min-height:190px;position:relative}
+.globe-wrap{width:170px;max-width:100%;aspect-ratio:1;position:relative}
+.globe{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 1px rgba(40,40,30,.08))}
+.globe-lines{transform-origin:50% 50%;animation:spinGlobe 18s linear infinite}
+@keyframes spinGlobe{to{transform:rotate(360deg)}}
+.compass{position:absolute;inset:18%;pointer-events:none}
+.compass text{font-size:11px;fill:var(--red);font-weight:700}
+.center-note{position:absolute;bottom:3px;left:50%;transform:translateX(-50%) rotate(-1deg);font-size:10px;color:var(--muted);white-space:nowrap}
+.play-area{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sheet{padding:12px;min-width:0}
+.sheet h3{margin:0;color:var(--ink);font-size:16px;transform:rotate(-.35deg)}
+.sheet-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.mapboard{position:relative;margin-top:10px}
+.map-sketch{position:absolute;inset:24px 6px 6px 26px;width:calc(100% - 32px);height:calc(100% - 30px);opacity:.16;pointer-events:none}
+.map-sketch path{fill:none;stroke:var(--ink2);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.map-sketch .land{fill:rgba(54,91,130,.08)}
+.boardgrid{
+  position:relative;display:grid;grid-template-columns:22px repeat(10,minmax(0,1fr));
+  grid-template-rows:22px repeat(10,minmax(0,1fr));gap:0;
+  user-select:none
+}
+.axis{display:flex;align-items:center;justify-content:center;font-size:10px;color:#667686}
+.cell{
+  position:relative;aspect-ratio:1;border-right:1px solid rgba(77,146,194,.19);
+  border-bottom:1px solid rgba(77,146,194,.19);background:rgba(255,255,255,.18);padding:0;
+  display:flex;align-items:center;justify-content:center;min-width:0
+}
+button.cell{border-top:0;border-left:0;cursor:pointer}
+button.cell:hover{background:rgba(65,110,150,.08)}
+.shipcell{background:rgba(23,57,95,.05)}
+.shipcell:before{
+  content:"";position:absolute;inset:24% 8%;border:2px solid var(--ink);border-radius:45% 30% 30% 45% / 50%;
+  opacity:.85;transform:rotate(-1deg)
+}
+.ship-v:before{inset:8% 24%;border-radius:45% 45% 30% 30% / 45% 45% 30% 30%}
+.ship-mid:before{border-radius:18%}
+.ship-end-a:before{border-radius:55% 16% 16% 55% / 50%}
+.ship-end-b:before{border-radius:16% 55% 55% 16% / 50%}
+.ship-v.ship-end-a:before{border-radius:55% 55% 16% 16% / 55% 55% 16% 16%}
+.ship-v.ship-end-b:before{border-radius:16% 16% 55% 55% / 16% 16% 55% 55%}
+.mark-miss{
+  width:42%;aspect-ratio:1;border:2px solid var(--ink2);border-radius:52% 48% 46% 54%;
+  transform:rotate(-9deg);opacity:.72
+}
+.mark-hit{position:relative;width:60%;height:60%}
+.mark-hit:before,.mark-hit:after{
+  content:"";position:absolute;left:48%;top:3%;width:3px;height:94%;background:var(--red);border-radius:4px
+}
+.mark-hit:before{transform:rotate(43deg)}.mark-hit:after{transform:rotate(-47deg)}
+.target-ring{
+  position:absolute;inset:11%;border:2px solid var(--red);border-radius:48% 53% 46% 51%;
+  transform:rotate(5deg);box-shadow:0 0 0 1px rgba(163,59,50,.12)
+}
+.target-ring:after{content:"";position:absolute;left:48%;top:-14%;height:128%;border-left:1px solid var(--red);opacity:.65}
+.lockline{width:100%;margin-top:10px}
+.volley-banner{
+  min-height:36px;margin-top:10px;padding:8px 10px;border-top:2px solid var(--red);border-bottom:1px solid #b79c88;
+  color:var(--red);font-weight:800;text-align:center;background:rgba(255,248,240,.55);
+  transform:rotate(-.25deg);transition:opacity .2s
+}
+.log-sheet{padding:12px;margin-top:12px}
+.log{font-size:12px;line-height:1.45;max-height:170px;overflow:auto}
+.log div{padding:3px 0;border-bottom:1px dashed rgba(100,90,70,.22)}
+.sunk-note{color:var(--red);font-weight:800}
+@media (prefers-reduced-motion:reduce){.globe-lines{animation:none}}
+@media(max-width:760px){
+  .theater-stage{grid-template-columns:1fr 1fr;grid-template-areas:"north east" "globe globe" "west south"}
+  .globe-card{min-height:165px}.globe-wrap{width:145px}
+  .play-area{grid-template-columns:1fr}
+}
 </style>
 </head>
-<body><main>
-<h1>Graph War <span class="small">V0.3</span></h1>
-<div class="small">Four fronts · separate intel · simultaneous volleys · 1 human + 3 bots</div>
+<body>
+<main>
+  <div class="topbar">
+    <div>
+      <h1>GRAPH WAR <span class="version">V0.4</span></h1>
+      <div class="tag">hand-drawn naval war table · four fronts · simultaneous volleys</div>
+    </div>
+    <div class="note">“build the war”</div>
+  </div>
 
-<section id="setup" class="paper">
-<div class="row"><strong>West Front — You</strong><span class="pill">10×10 · fleet 5/4/3/3/2</span></div>
-<div id="setupGrid" class="grid"></div>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button id="randomize" class="btn">Randomize Fleet</button><button id="start" class="btn primary">Start Battle</button></div>
-</section>
+  <section id="setup" class="paper setup">
+    <div class="row">
+      <div>
+        <strong style="color:var(--ink)">WEST FRONT — YOUR FLEET</strong>
+        <div class="sheet-sub">10×10 chart · fleet lengths 5 / 4 / 3 / 3 / 2</div>
+      </div>
+      <span class="pill">1 commander + 3 bots</span>
+    </div>
+    <div id="setupBoard" class="mapboard"></div>
+    <div class="setup-actions">
+      <button id="randomize" class="btn" type="button">↻ Redraw Fleet</button>
+      <button id="start" class="btn primary" type="button">Start Four-Front Battle</button>
+    </div>
+  </section>
 
-<section id="game" class="hidden">
-<div class="row" style="margin-top:12px"><div><span class="small">ROUND <span id="round">1</span></span><br><strong>Choose a front and coordinate</strong></div><span id="status" class="pill">PLANNING</span></div>
-<div class="fronts">
-<button class="front active" data-front="North">NORTH<br><span class="small nships">5 ships</span></button>
-<button class="front" data-front="East">EAST<br><span class="small eships">5 ships</span></button>
-<button class="front" data-front="South">SOUTH<br><span class="small sships">5 ships</span></button>
-<div class="front">WEST — YOU<br><span id="wships" class="small">5 ships</span></div>
-</div>
-<div class="two">
-<div class="paper">
-<div class="row"><div><strong id="intelTitle">North Front — Your Intel</strong><div class="small">Only your shots appear here.</div></div><span id="enemyCount" class="pill">5 ships</span></div>
-<div id="enemyGrid" class="grid"></div>
-<button id="lock" class="btn primary" style="width:100%;margin-top:12px" disabled>Lock Orders</button>
-</div>
-<div class="paper">
-<div class="row"><strong>West Front — Your Fleet</strong><span id="myCount" class="pill">5 ships</span></div>
-<div id="myGrid" class="grid"></div>
-</div>
-</div>
-<div class="paper"><div class="row"><strong>Volley Log</strong><button id="restart" class="btn">Restart</button></div><div id="log" class="log"></div></div>
-</section>
+  <section id="game" class="hidden">
+    <div class="row" style="margin-top:14px">
+      <div>
+        <span class="sheet-sub">ROUND <span id="round">1</span></span><br>
+        <strong style="color:var(--ink)">Choose a theater. Mark a coordinate.</strong>
+      </div>
+      <span id="status" class="war-status">PLANNING</span>
+    </div>
+
+    <div class="theater-stage">
+      <button id="northCard" class="front-card active" data-front="North" type="button">
+        <div class="name">NORTH FRONT</div><div class="meta"><span class="ships">5 ships</span> · cold waters</div>
+      </button>
+      <button id="westCard" class="front-card" type="button" disabled>
+        <div class="name">WEST — YOU</div><div class="meta"><span id="wships">5 ships</span> · home theater</div>
+      </button>
+
+      <div class="globe-card paper">
+        <div class="globe-wrap" aria-label="Hand-drawn rotating atlas globe">
+          <svg class="globe" viewBox="0 0 200 200" role="img" aria-label="Atlas globe with compass rose">
+            <circle cx="100" cy="100" r="76" fill="rgba(255,255,255,.26)" stroke="#17395f" stroke-width="2.2"/>
+            <g class="globe-lines" fill="none" stroke="#365b82" stroke-width="1.25" opacity=".8">
+              <ellipse cx="100" cy="100" rx="58" ry="76"/><ellipse cx="100" cy="100" rx="30" ry="76"/>
+              <ellipse cx="100" cy="100" rx="76" ry="50"/><ellipse cx="100" cy="100" rx="76" ry="24"/>
+              <path d="M42 66 Q58 51 70 58 T92 58 Q101 47 116 55 T147 67 Q137 83 123 80 T101 88 Q87 79 74 84 T47 77Z" fill="rgba(54,91,130,.12)"/>
+              <path d="M115 105 Q128 95 146 101 T158 118 Q145 132 131 128 T112 116Z" fill="rgba(54,91,130,.12)"/>
+              <path d="M57 111 Q70 103 86 112 T91 133 Q77 151 61 143 T50 123Z" fill="rgba(54,91,130,.12)"/>
+            </g>
+            <circle cx="100" cy="100" r="4" fill="#a33b32"/>
+          </svg>
+          <svg class="compass" viewBox="0 0 100 100" aria-hidden="true">
+            <g fill="none" stroke="#a33b32" stroke-width="1.5">
+              <path d="M50 5 L57 41 L50 34 L43 41 Z"/><path d="M95 50 L59 57 L66 50 L59 43 Z"/>
+              <path d="M50 95 L43 59 L50 66 L57 59 Z"/><path d="M5 50 L41 43 L34 50 L41 57 Z"/>
+              <circle cx="50" cy="50" r="12"/>
+            </g>
+            <text x="47" y="9">N</text><text x="91" y="53">E</text><text x="47" y="98">S</text><text x="3" y="53">W</text>
+          </svg>
+        </div>
+        <div class="center-note">ATLAS / WAR TABLE</div>
+      </div>
+
+      <button id="eastCard" class="front-card" data-front="East" type="button">
+        <div class="name">EAST FRONT</div><div class="meta"><span class="ships">5 ships</span> · island lanes</div>
+      </button>
+      <button id="southCard" class="front-card" data-front="South" type="button">
+        <div class="name">SOUTH FRONT</div><div class="meta"><span class="ships">5 ships</span> · open sea</div>
+      </button>
+    </div>
+
+    <div id="volleyBanner" class="volley-banner">Awaiting orders…</div>
+
+    <div class="play-area">
+      <section class="paper sheet">
+        <div class="row">
+          <div><h3 id="intelTitle">NORTH FRONT — INTEL</h3><div class="sheet-sub">Only your own reconnaissance appears on this chart.</div></div>
+          <span id="enemyCount" class="pill">5 ships</span>
+        </div>
+        <div id="enemyBoard" class="mapboard"></div>
+        <button id="lock" class="btn primary lockline" type="button" disabled>✎ LOCK ORDERS</button>
+      </section>
+
+      <section class="paper sheet">
+        <div class="row">
+          <div><h3>WEST FRONT — HOME WATERS</h3><div class="sheet-sub">Enemy fire is marked directly onto your chart.</div></div>
+          <span id="myCount" class="pill">5 ships</span>
+        </div>
+        <div id="myBoard" class="mapboard"></div>
+      </section>
+    </div>
+
+    <section class="paper log-sheet">
+      <div class="row"><strong style="color:var(--ink)">COMMANDER'S NOTES</strong><button id="restart" class="btn" type="button">New Battle</button></div>
+      <div id="log" class="log" aria-live="polite"></div>
+    </section>
+  </section>
 </main>
+
 <script>
 (function(){
-var SIZE=10,LENS=[5,4,3,3,2],NAMES=["North","East","South","West"],fronts={},intel={},enemy="North",selected=null,round=1,ended=false;
-function id(x){return document.getElementById(x)}function k(r,c){return r+","+c}
+"use strict";
+var SIZE=10,LENS=[5,4,3,3,2],NAMES=["North","East","South","West"];
+var fronts={},intel={},enemy="North",selected=null,round=1,ended=false,resolving=false;
+
+function id(x){return document.getElementById(x)}
+function key(r,c){return r+","+c}
 function coord(x){var p=x.split(","),r=+p[0],c=+p[1];return String.fromCharCode(65+c)+(r+1)}
 function newBoard(){return{ships:[],shots:{},alive:true}}
-function fleet(){var b=newBoard();for(var q=0;q<LENS.length;q++){var len=LENS[q],ok=false;while(!ok){var h=Math.random()<.5,r=h?Math.floor(Math.random()*SIZE):Math.floor(Math.random()*(SIZE-len+1)),c=h?Math.floor(Math.random()*(SIZE-len+1)):Math.floor(Math.random()*SIZE),cells=[];for(var i=0;i<len;i++)cells.push(k(r+(h?0:i),c+(h?i:0)));ok=true;for(var s=0;s<b.ships.length;s++)for(var j=0;j<b.ships[s].cells.length;j++)if(cells.indexOf(b.ships[s].cells[j])>=0)ok=false;if(ok)b.ships.push({cells:cells,hits:{},sunk:false})}}return b}
-function reset(){fronts={North:fleet(),East:fleet(),South:fleet(),West:fleet()};intel={North:{},East:{},South:{}};enemy="North";selected=null;round=1;ended=false}
+function placeFleet(){
+  var b=newBoard();
+  for(var q=0;q<LENS.length;q++){
+    var len=LENS[q],done=false,guard=0;
+    while(!done&&guard++<1000){
+      var h=Math.random()<.5;
+      var r=h?Math.floor(Math.random()*SIZE):Math.floor(Math.random()*(SIZE-len+1));
+      var c=h?Math.floor(Math.random()*(SIZE-len+1)):Math.floor(Math.random()*SIZE);
+      var cells=[];for(var i=0;i<len;i++)cells.push(key(r+(h?0:i),c+(h?i:0)));
+      var overlap=false;
+      for(var s=0;s<b.ships.length;s++)for(var j=0;j<b.ships[s].cells.length;j++)if(cells.indexOf(b.ships[s].cells[j])>=0)overlap=true;
+      if(!overlap){b.ships.push({cells:cells,hits:{},sunk:false,h:h});done=true}
+    }
+  }
+  return b
+}
+function reset(){
+  fronts={North:placeFleet(),East:placeFleet(),South:placeFleet(),West:placeFleet()};
+  intel={North:{},East:{},South:{}};
+  enemy="North";selected=null;round=1;ended=false;resolving=false
+}
 function shipAt(b,x){for(var i=0;i<b.ships.length;i++)if(b.ships[i].cells.indexOf(x)>=0)return b.ships[i];return null}
 function left(b){var n=0;for(var i=0;i<b.ships.length;i++)if(!b.ships[i].sunk)n++;return n}
-function fire(b,x){if(b.shots[x])return null;var s=shipAt(b,x);b.shots[x]=s?"hit":"miss";if(!s)return{hit:false,sunk:false};s.hits[x]=1;var sunk=true;for(var i=0;i<s.cells.length;i++)if(!s.hits[s.cells[i]])sunk=false;if(sunk)s.sunk=true;if(left(b)===0)b.alive=false;return{hit:true,sunk:sunk}}
-function randCell(b){var a=[];for(var r=0;r<SIZE;r++)for(var c=0;c<SIZE;c++){var x=k(r,c);if(!b.shots[x])a.push(x)}return a[Math.floor(Math.random()*a.length)]}
-function botOrder(bot){var a=[];for(var i=0;i<NAMES.length;i++)if(NAMES[i]!==bot&&fronts[NAMES[i]].alive)a.push(NAMES[i]);if(!a.length)return null;var t=a[Math.floor(Math.random()*a.length)];return{a:bot,t:t,x:randCell(fronts[t])}}
-function drawOwn(el,b){el.innerHTML="";for(var r=0;r<SIZE;r++)for(var c=0;c<SIZE;c++){var x=k(r,c),d=document.createElement("div");d.className="cell";if(shipAt(b,x))d.className+=" ship";if(b.shots[x]==="hit"){d.textContent="✕";d.className+=" hit"}else if(b.shots[x]==="miss"){d.textContent="○";d.className+=" miss"}el.appendChild(d)}}
-function choose(e){selected=e.currentTarget.getAttribute("data-cell");render()}
-function drawEnemy(){var el=id("enemyGrid"),seen=intel[enemy];el.innerHTML="";for(var r=0;r<SIZE;r++)for(var c=0;c<SIZE;c++){var x=k(r,c),b=document.createElement("button");b.className="cell";b.setAttribute("data-cell",x);if(seen[x]==="hit"){b.textContent="✕";b.className+=" hit"}else if(seen[x]==="miss"){b.textContent="○";b.className+=" miss"}if(selected===x)b.className+=" target";b.disabled=ended||!!seen[x]||!fronts[enemy].alive;if(!b.disabled)b.addEventListener("click",choose);el.appendChild(b)}}
-function log(t){var d=document.createElement("div");d.textContent=t;id("log").prepend(d)}
-function render(){id("round").textContent=round;id("intelTitle").textContent=enemy+" Front — Your Intel";id("enemyCount").textContent=left(fronts[enemy])+" ships";id("myCount").textContent=left(fronts.West)+" ships";id("wships").textContent=left(fronts.West)+" ships";document.querySelector(".nships").textContent=left(fronts.North)+" ships";document.querySelector(".eships").textContent=left(fronts.East)+" ships";document.querySelector(".sships").textContent=left(fronts.South)+" ships";id("lock").disabled=!selected||ended;id("status").textContent=ended?"BATTLE ENDED":"PLANNING";drawEnemy();drawOwn(id("myGrid"),fronts.West);var bs=document.querySelectorAll("[data-front]");for(var i=0;i<bs.length;i++){var n=bs[i].getAttribute("data-front");bs[i].className=n===enemy?"front active":"front";bs[i].disabled=!fronts[n].alive||ended}}
-function resolve(){if(!selected||ended)return;var orders=[{a:"West",t:enemy,x:selected}],bots=["North","East","South"];for(var i=0;i<bots.length;i++)if(fronts[bots[i]].alive){var o=botOrder(bots[i]);if(o)orders.push(o)}log("— VOLLEY "+round+" —");for(i=0;i<orders.length;i++){o=orders[i];if(!fronts[o.a].alive||!fronts[o.t].alive)continue;var res=fire(fronts[o.t],o.x);if(!res)continue;if(o.a==="West")intel[o.t][o.x]=res.hit?"hit":"miss";log(o.a+" → "+o.t+" "+coord(o.x)+" "+(res.hit?"HIT":"MISS")+(res.sunk?" · SHIP SUNK":""))}var alive=NAMES.filter(function(n){return fronts[n].alive});if(!fronts.West.alive){ended=true;log("WEST FRONT ELIMINATED")}else if(alive.length<=1){ended=true;log(alive[0]+" WINS")}round++;selected=null;if(!fronts[enemy].alive){var next=["North","East","South"].filter(function(n){return fronts[n].alive});if(next.length)enemy=next[0]}render()}
-reset();drawOwn(id("setupGrid"),fronts.West);
-id("randomize").onclick=function(){fronts.West=fleet();drawOwn(id("setupGrid"),fronts.West)};
-id("start").onclick=function(){id("setup").className="hidden";id("game").className="";id("log").innerHTML="";log("Battle started. You command West.");render()};
-id("lock").onclick=resolve;id("restart").onclick=function(){reset();id("game").className="hidden";id("setup").className="paper";drawOwn(id("setupGrid"),fronts.West)};
-var fb=document.querySelectorAll("[data-front]");for(var z=0;z<fb.length;z++)fb[z].onclick=function(){enemy=this.getAttribute("data-front");selected=null;render()};
+function fire(b,x){
+  if(Object.prototype.hasOwnProperty.call(b.shots,x))return null;
+  var s=shipAt(b,x);b.shots[x]=s?"hit":"miss";
+  if(!s)return{hit:false,sunk:false};
+  s.hits[x]=1;var sunk=true;
+  for(var i=0;i<s.cells.length;i++)if(!s.hits[s.cells[i]])sunk=false;
+  if(sunk)s.sunk=true;if(left(b)===0)b.alive=false;
+  return{hit:true,sunk:sunk}
+}
+function randCell(b){
+  var a=[];for(var r=0;r<SIZE;r++)for(var c=0;c<SIZE;c++){var x=key(r,c);if(!Object.prototype.hasOwnProperty.call(b.shots,x))a.push(x)}
+  return a.length?a[Math.floor(Math.random()*a.length)]:null
+}
+function botOrder(bot){
+  var a=[];for(var i=0;i<NAMES.length;i++)if(NAMES[i]!==bot&&fronts[NAMES[i]].alive)a.push(NAMES[i]);
+  if(!a.length)return null;var t=a[Math.floor(Math.random()*a.length)];return{a:bot,t:t,x:randCell(fronts[t])}
+}
+function mapSvg(front){
+  var paths={
+    North:'M8 18 Q20 8 34 14 T60 12 Q74 20 91 11 M10 45 Q27 39 41 48 T72 43 Q82 38 96 45',
+    East:'M7 16 Q20 27 31 18 T52 20 M58 12 Q70 24 83 18 T96 21 M14 60 Q28 49 40 58 T64 55 Q78 48 93 62',
+    South:'M6 23 Q22 17 36 24 T63 21 Q78 30 95 25 M18 67 Q33 57 47 64 T76 60',
+    West:'M8 15 Q24 8 38 17 T66 14 Q78 8 94 18 M14 56 Q27 48 41 57 T68 55 Q79 46 94 57'
+  };
+  return '<svg class="map-sketch" viewBox="0 0 100 80" preserveAspectRatio="none" aria-hidden="true"><path class="land" d="'+paths[front]+'"/><path d="'+paths[front]+'"/></svg>'
+}
+function mark(type){
+  var span=document.createElement("span");span.className=type==="hit"?"mark-hit":"mark-miss";return span
+}
+function buildBoard(el,b,mode,front){
+  el.innerHTML=mapSvg(front);
+  var grid=document.createElement("div");grid.className="boardgrid";
+  var corner=document.createElement("div");corner.className="axis";grid.appendChild(corner);
+  for(var c=0;c<SIZE;c++){var a=document.createElement("div");a.className="axis";a.textContent=String.fromCharCode(65+c);grid.appendChild(a)}
+  for(var r=0;r<SIZE;r++){
+    var rn=document.createElement("div");rn.className="axis";rn.textContent=r+1;grid.appendChild(rn);
+    for(c=0;c<SIZE;c++){
+      var x=key(r,c),cell=document.createElement(mode==="enemy"?"button":"div"),state=mode==="enemy"?intel[front][x]:b.shots[x];
+      cell.className="cell";if(mode==="enemy"){cell.type="button";cell.setAttribute("data-cell",x)}
+      var s=mode==="own"?shipAt(b,x):null;
+      if(s){
+        cell.className+=" shipcell "+(s.h?"ship-h":"ship-v");
+        var idx=s.cells.indexOf(x);
+        if(idx===0)cell.className+=" ship-end-a";else if(idx===s.cells.length-1)cell.className+=" ship-end-b";else cell.className+=" ship-mid"
+      }
+      if(state==="hit")cell.appendChild(mark("hit"));else if(state==="miss")cell.appendChild(mark("miss"));
+      if(mode==="enemy"&&selected===x){var ring=document.createElement("span");ring.className="target-ring";cell.appendChild(ring)}
+      if(mode==="enemy"){
+        cell.disabled=ended||resolving||!!state||!fronts[front].alive;
+        if(!cell.disabled)cell.addEventListener("click",function(e){selected=e.currentTarget.getAttribute("data-cell");render()})
+      }
+      grid.appendChild(cell)
+    }
+  }
+  el.appendChild(grid)
+}
+function log(t,important){
+  var d=document.createElement("div");d.textContent=t;if(important)d.className="sunk-note";id("log").prepend(d)
+}
+function setCard(front,cardId){
+  var card=id(cardId),ships=card.querySelector(".ships");
+  if(ships)ships.textContent=left(fronts[front])+" ships";
+  card.classList.toggle("active",front===enemy);
+  card.classList.toggle("eliminated",!fronts[front].alive);
+  card.disabled=ended||resolving||!fronts[front].alive
+}
+function render(){
+  id("round").textContent=round;
+  id("intelTitle").textContent=enemy.toUpperCase()+" FRONT — INTEL";
+  id("enemyCount").textContent=left(fronts[enemy])+" ships";
+  id("myCount").textContent=left(fronts.West)+" ships";
+  id("wships").textContent=left(fronts.West)+" ships";
+  id("status").textContent=ended?"BATTLE ENDED":resolving?"VOLLEY IN MOTION":selected?("TARGET "+enemy.toUpperCase()+" "+coord(selected)):"PLANNING";
+  id("lock").disabled=!selected||ended||resolving;
+  buildBoard(id("enemyBoard"),fronts[enemy],"enemy",enemy);
+  buildBoard(id("myBoard"),fronts.West,"own","West");
+  setCard("North","northCard");setCard("East","eastCard");setCard("South","southCard")
+}
+function resolve(){
+  if(!selected||ended||resolving)return;
+  resolving=true;render();
+  var orders=[{a:"West",t:enemy,x:selected}],bots=["North","East","South"];
+  for(var i=0;i<bots.length;i++)if(fronts[bots[i]].alive){var o=botOrder(bots[i]);if(o)orders.push(o)}
+  log("— VOLLEY "+round+" —");
+  var idx=0;
+  function step(){
+    if(idx>=orders.length){finish();return}
+    var o=orders[idx++];
+    if(!fronts[o.a].alive||!fronts[o.t].alive||!o.x){setTimeout(step,180);return}
+    id("volleyBanner").textContent=o.a.toUpperCase()+" → "+o.t.toUpperCase()+" : "+coord(o.x);
+    var res=fire(fronts[o.t],o.x);
+    if(res){
+      if(o.a==="West")intel[o.t][o.x]=res.hit?"hit":"miss";
+      var line=o.a+" → "+o.t+" "+coord(o.x)+" "+(res.hit?"HIT":"MISS")+(res.sunk?" · SHIP SUNK":"");
+      log(line,!!res.sunk)
+    }
+    render();setTimeout(step,420)
+  }
+  function finish(){
+    var alive=NAMES.filter(function(n){return fronts[n].alive});
+    if(!fronts.West.alive){ended=true;log("WEST FRONT ELIMINATED",true)}
+    else if(alive.length<=1){ended=true;log((alive[0]||"NO FRONT")+" WINS",true)}
+    if(!fronts[enemy].alive){
+      var next=["North","East","South"].filter(function(n){return fronts[n].alive});
+      if(next.length)enemy=next[0]
+    }
+    round++;selected=null;resolving=false;
+    id("volleyBanner").textContent=ended?"Battle concluded.":"Volley complete. Mark next orders.";
+    render()
+  }
+  step()
+}
+function switchFront(n){if(!fronts[n]||!fronts[n].alive||ended||resolving)return;enemy=n;selected=null;render()}
+reset();buildBoard(id("setupBoard"),fronts.West,"own","West");
+id("randomize").addEventListener("click",function(){fronts.West=placeFleet();buildBoard(id("setupBoard"),fronts.West,"own","West")});
+id("start").addEventListener("click",function(){id("setup").classList.add("hidden");id("game").classList.remove("hidden");id("log").innerHTML="";id("volleyBanner").textContent="Awaiting orders…";log("Battle opened. West Front under your command.");render()});
+id("lock").addEventListener("click",resolve);
+id("restart").addEventListener("click",function(){reset();id("game").classList.add("hidden");id("setup").classList.remove("hidden");buildBoard(id("setupBoard"),fronts.West,"own","West")});
+id("northCard").addEventListener("click",function(){switchFront("North")});
+id("eastCard").addEventListener("click",function(){switchFront("East")});
+id("southCard").addEventListener("click",function(){switchFront("South")});
 })();
 </script>
-</body></html>
+</body>
+</html>
