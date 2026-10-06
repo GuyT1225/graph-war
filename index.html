@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.7 Volley Feedback</title>
+<title>Graph War V0.8 Impact & Drama</title>
 <style>
 :root{
   --paper:#f7f1e4;--ink:#163a61;--ink2:#496f95;--grid:rgba(68,139,191,.18);
@@ -39,6 +39,15 @@ h1{margin:0;color:var(--ink);font-size:32px;letter-spacing:-1.4px}
 .enemyArc{fill:none;stroke:#aa3f36;stroke-opacity:.62;stroke-width:2.3;stroke-dasharray:7 6}
 .enemyShell{fill:#aa3f36}
 .enemyImpact{fill:none;stroke:#aa3f36;stroke-width:2.5;stroke-opacity:.78}
+.flashText{font-weight:700;fill:#aa3f36;font-size:24px;letter-spacing:1px;paint-order:stroke;stroke:#f7f1e4;stroke-width:5px;stroke-linejoin:round}
+.shock{fill:none;stroke:#aa3f36;stroke-width:3;opacity:.8}
+.debris{fill:#aa3f36;opacity:.65}
+.battlewrap.incoming .board,.battlewrap.incoming .panel{filter:saturate(.55) brightness(.92);opacity:.72;transition:.18s}
+.wartable.incoming{box-shadow:0 0 0 3px rgba(170,63,54,.14),0 7px 20px rgba(65,32,24,.18)}
+.shake{animation:paperShake .23s linear}
+.heavyShake{animation:paperShakeHeavy .34s linear}
+@keyframes paperShake{0%,100%{transform:translate(0)}25%{transform:translate(-2px,1px)}50%{transform:translate(2px,-1px)}75%{transform:translate(-1px,-1px)}}
+@keyframes paperShakeHeavy{0%,100%{transform:translate(0)}15%{transform:translate(-5px,2px)}35%{transform:translate(4px,-3px)}55%{transform:translate(-3px,3px)}75%{transform:translate(2px,-1px)}}
 
 .battlewrap{display:grid;grid-template-columns:minmax(0,1fr) 286px;gap:12px;margin-top:12px}
 .board{position:relative;min-height:680px;overflow:hidden}
@@ -70,12 +79,12 @@ input[type=range]{width:100%}
 </head>
 <body>
 <main>
-<h1>GRAPH WAR <span style="font-size:12px;font-weight:400">V0.7 WAR TABLE + VOLLEY FEEDBACK</span></h1>
-<div class="sub">Compact command table. Larger firing chart. Incoming volleys now happen on-screen.</div>
+<h1>GRAPH WAR <span style="font-size:12px;font-weight:400">V0.8 IMPACT & DRAMA</span></h1>
+<div class="sub">Launch harder. Track the shell. Feel the impact. Survive the return volley.</div>
 
-<section class="paper wartable">
+<section class="paper wartable" id="warTable">
   <svg id="commandSky" viewBox="0 0 1000 218" preserveAspectRatio="none" aria-hidden="true">
-    <g id="enemyVolleyLayer"></g>
+    <g id="enemyVolleyLayer"></g><g id="enemyFxLayer"></g>
   </svg>
 
   <button class="front north active" data-front="north"><b>NORTH FRONT</b><small>cold-water theater</small><div class="intel" id="intelNorth">INTEL: no confirmed hits</div></button>
@@ -103,7 +112,7 @@ input[type=range]{width:100%}
   <div class="volley-note" id="volleyNote">VOLLEY 1 • select target front</div>
 </section>
 
-<div class="battlewrap">
+<div class="battlewrap" id="battleWrap">
 <section class="paper board">
 <svg id="scene" viewBox="0 0 980 660" aria-label="artillery plotting chart">
   <defs>
@@ -113,7 +122,7 @@ input[type=range]{width:100%}
   <text id="chartTitle" x="674" y="38" fill="#163a61" font-size="17">NORTH THEATER</text>
   <text x="674" y="57" fill="#72776f" font-size="10">enemy fleet positions concealed</text>
   <path id="coast" d="" fill="#d7ceb8" stroke="#777064" stroke-width="2" opacity=".92"/>
-  <g id="history"></g>
+  <g id="history"></g><g id="fxLayer"></g>
   <g id="gun" transform="translate(90 510)">
     <circle cx="0" cy="0" r="18" fill="#f7f1e4" stroke="#163a61" stroke-width="3"/>
     <line id="barrel" x1="0" y1="0" x2="78" y2="0" stroke="#163a61" stroke-width="8" stroke-linecap="round"/>
@@ -160,7 +169,7 @@ var shell=document.getElementById("shell"),liveTrail=document.getElementById("li
 var history=document.getElementById("history"),status=document.getElementById("status"),fire=document.getElementById("fire");
 var targetShip=document.getElementById("targetShip"),targetName=document.getElementById("targetName"),chartTitle=document.getElementById("chartTitle");
 var coast=document.getElementById("coast"),battleLog=document.getElementById("battleLog"),volleyNote=document.getElementById("volleyNote");
-var enemyVolleyLayer=document.getElementById("enemyVolleyLayer"),homeStatus=document.getElementById("homeStatus");
+var enemyVolleyLayer=document.getElementById("enemyVolleyLayer"),enemyFxLayer=document.getElementById("enemyFxLayer"),homeStatus=document.getElementById("homeStatus");var fxLayer=document.getElementById("fxLayer"),battleWrap=document.getElementById("battleWrap"),warTable=document.getElementById("warTable"),boardEl=document.querySelector(".board");
 
 var origin={x:90,y:510},currentFront="north",volley=1,homeHits=0;
 var fronts={
@@ -187,8 +196,20 @@ function renderHistory(){
 function setFront(front){
  if(!fronts[front]||fire.disabled)return;currentFront=front;document.querySelectorAll("[data-front]").forEach(function(el){el.classList.toggle("active",el.getAttribute("data-front")===front)});targetName.textContent=fronts[front].label;chartTitle.textContent=fronts[front].label.replace(" FRONT","")+" THEATER";coast.setAttribute("d",fronts[front].coast);targetShip.setAttribute("transform","translate("+fronts[front].shipX+" "+fronts[front].shipY+")");targetShip.setAttribute("opacity",fronts[front].hits?"1":"0");status.textContent="Plotting against "+fronts[front].label+".";renderHistory();update();
 }
-function recoil(){gun.setAttribute("transform","translate(82 514)");muzzlePuff.setAttribute("opacity","1");setTimeout(function(){gun.setAttribute("transform","translate(90 510)");muzzlePuff.setAttribute("opacity","0")},145)}
+function kick(el,heavy){el.classList.remove("shake","heavyShake");void el.offsetWidth;el.classList.add(heavy?"heavyShake":"shake");setTimeout(function(){el.classList.remove("shake","heavyShake")},heavy?360:250)}
+function recoil(){gun.setAttribute("transform","translate(77 516)");muzzlePuff.setAttribute("opacity","1");kick(boardEl,false);setTimeout(function(){gun.setAttribute("transform","translate(90 510)")},95);setTimeout(function(){muzzlePuff.setAttribute("opacity","0")},210)}
 function addLog(msg){battleLog.innerHTML=msg+"<br>"+battleLog.innerHTML}
+function callout(layer,x,y,text,size){
+ var t=document.createElementNS(NS,"text");t.setAttribute("class","flashText");t.setAttribute("x",x);t.setAttribute("y",y);t.setAttribute("text-anchor","middle");if(size)t.setAttribute("font-size",size);t.textContent=text;layer.appendChild(t);
+ setTimeout(function(){t.setAttribute("opacity",".25")},430);setTimeout(function(){t.remove()},1050)
+}
+function impactBurst(x,y,hit){
+ fxLayer.innerHTML="";
+ var ring=document.createElementNS(NS,"circle");ring.setAttribute("class","shock");ring.setAttribute("cx",x);ring.setAttribute("cy",y);ring.setAttribute("r","8");fxLayer.appendChild(ring);
+ var start=performance.now(),dur=360;function grow(now){var q=Math.min(1,(now-start)/dur);ring.setAttribute("r",8+q*(hit?48:30));ring.setAttribute("opacity",.85*(1-q));if(q<1)requestAnimationFrame(grow);else ring.remove()}requestAnimationFrame(grow);
+ for(var i=0;i<(hit?12:7);i++){var d=document.createElementNS(NS,"circle");d.setAttribute("class","debris");d.setAttribute("cx",x);d.setAttribute("cy",y);d.setAttribute("r",hit?3:2);fxLayer.appendChild(d);(function(node,a,dist){var st=performance.now();function fly(now){var q=Math.min(1,(now-st)/320);node.setAttribute("cx",x+Math.cos(a)*dist*q);node.setAttribute("cy",y+Math.sin(a)*dist*q-12*Math.sin(Math.PI*q));node.setAttribute("opacity",.7*(1-q));if(q<1)requestAnimationFrame(fly);else node.remove()}requestAnimationFrame(fly)})(d,(Math.PI*2*i)/(hit?12:7),20+Math.random()*(hit?32:18))}
+ callout(fxLayer,x,Math.max(52,y-46),hit?"DIRECT HIT":"SPLASH",hit?28:20);kick(boardEl,hit)
+}
 function updateIntel(){["north","east","south"].forEach(function(f){var el=document.getElementById("intel"+f.charAt(0).toUpperCase()+f.slice(1));el.textContent=fronts[f].hits?("INTEL: "+fronts[f].hits+" confirmed hit"+(fronts[f].hits===1?"":"s")):"INTEL: no confirmed hits"});homeStatus.textContent=homeHits?("FLEET STATUS: "+homeHits+" hit"+(homeHits===1?"":"s")+" sustained"):"FLEET STATUS: holding"}
 
 function incomingArc(from,outcome,delay){
@@ -202,7 +223,7 @@ function incomingArc(from,outcome,delay){
    function frame(now){var t=Math.min(1,(now-started)/dur),pt=pointOnQuad(t,start[0],start[1],cx,cy,end[0],end[1]);shell.setAttribute("cx",pt.x);shell.setAttribute("cy",pt.y);if(t<1){requestAnimationFrame(frame);return}
     shell.remove();
     var mark=document.createElementNS(NS,"circle");mark.setAttribute("class","enemyImpact");mark.setAttribute("cx",end[0]+(Math.random()*22-11));mark.setAttribute("cy",end[1]+(Math.random()*16-8));mark.setAttribute("r",outcome==="HIT"?"10":"6");enemyVolleyLayer.appendChild(mark);
-    if(outcome==="HIT")homeHits++;
+    if(outcome==="HIT"){homeHits++;kick(warTable,true);callout(enemyFxLayer,92,82,"HIT!",22)}else{callout(enemyFxLayer,92,82,"SPLASH",16)}
     setTimeout(function(){path.setAttribute("stroke-opacity",".16");mark.setAttribute("stroke-opacity",".28")},220);
     resolve();
    }requestAnimationFrame(frame);
@@ -210,25 +231,25 @@ function incomingArc(from,outcome,delay){
  });
 }
 async function botResolution(){
- enemyVolleyLayer.innerHTML="";
+ enemyVolleyLayer.innerHTML="";enemyFxLayer.innerHTML="";battleWrap.classList.add("incoming");warTable.classList.add("incoming");callout(enemyFxLayer,500,106,"INCOMING!",26);
  volleyNote.textContent="VOLLEY "+volley+" • INCOMING FIRE";
  var names=["north","east","south"],parts=[],promises=[];
  names.forEach(function(n,i){var outcome=Math.random()<.30?"HIT":"MISS";parts.push(n.toUpperCase()+" → "+outcome);promises.push(incomingArc(n,outcome,i*160))});
  await Promise.all(promises);
  updateIntel();addLog("ENEMY VOLLEY: "+parts.join(" / "));
  status.textContent=homeHits?"INCOMING VOLLEY RESOLVED — damage recorded":"INCOMING VOLLEY RESOLVED — no direct hits";
- volley++;volleyNote.textContent="VOLLEY "+volley+" • select target front";fire.disabled=false;
+ volley++;volleyNote.textContent="VOLLEY "+volley+" • select target front";battleWrap.classList.remove("incoming");warTable.classList.remove("incoming");fire.disabled=false;
 }
 
 function shoot(){
  fire.disabled=true;var s=solution(),f=fronts[currentFront],cx=(origin.x+s.x)/2;shell.setAttribute("opacity","1");liveTrail.setAttribute("d","");impact.setAttribute("opacity","0");status.textContent="ORDERS LOCKED — SHOT AWAY";volleyNote.textContent="VOLLEY "+volley+" • ORDERS LOCKED";recoil();
- var start=performance.now(),duration=1250,trail=[];
+ var start=performance.now(),duration=1380,trail=[];
  function frame(now){var t=Math.min(1,(now-start)/duration),pt=pointOnQuad(t,origin.x,origin.y,cx,s.apex,s.x,s.y);shell.setAttribute("cx",pt.x);shell.setAttribute("cy",pt.y);trail.push(pt);if(trail.length>20)trail.shift();var d="";trail.forEach(function(q,i){d+=(i?" L ":"M ")+q.x+" "+q.y});liveTrail.setAttribute("d",d);if(t<1){requestAnimationFrame(frame);return}
   shell.setAttribute("opacity","0");liveTrail.setAttribute("d","");impact.setAttribute("transform","translate("+s.x+" "+s.y+")");impact.setAttribute("opacity","1");
   var hit=s.x>=f.shipX&&s.x<=f.shipX+110;f.history.push({path:pathFor(s),x:s.x,y:s.y,hit:hit,deg:s.deg,p:s.p});if(f.history.length>6)f.history.shift();
-  if(hit){f.hits++;targetShip.setAttribute("opacity","1");status.textContent="DIRECT HIT — "+f.label+" marked";addLog("WEST → "+f.label+": HIT at "+sectorFromX(s.x))}
-  else if(s.inRange){status.textContent="MISS — mark it and correct";addLog("WEST → "+f.label+": MISS at "+sectorFromX(s.x))}
-  else{status.textContent="SHORT — adjust firing solution";addLog("WEST → "+f.label+": SHORT")}
+  if(hit){f.hits++;targetShip.setAttribute("opacity","1");status.textContent="DIRECT HIT — "+f.label+" marked";addLog("WEST → "+f.label+": HIT at "+sectorFromX(s.x));impactBurst(s.x,s.y,true)}
+  else if(s.inRange){status.textContent="MISS — mark it and correct";addLog("WEST → "+f.label+": MISS at "+sectorFromX(s.x));impactBurst(s.x,s.y,false)}
+  else{status.textContent="SHORT — adjust firing solution";addLog("WEST → "+f.label+": SHORT");callout(fxLayer,s.x,Math.max(52,s.y-44),"SHORT",18);kick(boardEl,false)}
   renderHistory();updateIntel();setTimeout(function(){impact.setAttribute("opacity",".24");botResolution()},520);
  }requestAnimationFrame(frame);
 }
