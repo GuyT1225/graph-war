@@ -636,7 +636,7 @@ function incomingSpec(front,index){
   };
   var s=specs[front];
   var strength=fleetStrength(front);
-  var baseHit=front===lastAttackedFront?.14:.10;
+  var baseHit=front===lastAttackedFront ? .14 : .10;
   var hit=Math.random()<(baseHit*(.55+.45*strength));
   var endZ=50+(Math.random()*14-7);
   var endX=hit?gun.x+2+(Math.random()*4):gun.x+10+(Math.random()*12);
@@ -669,8 +669,9 @@ function runIncomingFront(order,index){
     volley++;
     volleyLabel.textContent="Volley "+volley;
     orbitLabel.textContent="Camera: slow orbit";
-    document.getElementById("westIntel").textContent=homeDamage?(homeDamage+" hit"+(homeDamage===1?"":"s")+" sustained"):"Fleet ready";
-    status.textContent=homeDamage?"RETURN FIRE RESOLVED — West has sustained "+homeDamage+" hit"+(homeDamage===1?"":"s")+".":"RETURN FIRE RESOLVED — West is still holding.";
+    updateFrontIntel();
+    var aliveWest=westFleet.filter(function(ship){return ship.hp>0;}).length;
+    status.textContent=aliveWest<3?"RETURN FIRE RESOLVED — West fleet status updated.":"RETURN FIRE RESOLVED — West is still holding.";
     fire.disabled=false;
     return;
   }
@@ -697,7 +698,7 @@ function resolveIncoming(s){
     flash("SPLASH");
     status.textContent=s.label+" FRONT missed West.";
   }
-  document.getElementById("westIntel").textContent=homeDamage?(homeDamage+" hit"+(homeDamage===1?"":"s")+" sustained"):"Fleet ready";
+  updateFrontIntel();
   var order=s.order||[];
   var next=s.index+1;
   incomingShot=null;
