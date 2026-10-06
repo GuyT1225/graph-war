@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.9.5 — Arcade Punch</title>
+<title>Graph War V0.10 — Four-Front 2.5D</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -58,8 +58,8 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.9.5 ARCADE PUNCH</span></h1>
-      <div class="sub">2.5D artillery with stronger arcade feedback, clearer status energy, and a punched-up War Room header.</div>
+      <h1>GRAPH WAR <span class="version">V0.10 FOUR-FRONT</span></h1>
+      <div class="sub">Four-front 2.5D artillery: choose a theater, read its terrain, solve the shot, and carry separate intel across the war.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -70,6 +70,15 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
       </select>
     </div>
   </div>
+
+  
+  <section class="frontbar" aria-label="Four front command table">
+    <button class="frontCard" data-front="north"><span class="dir">NORTH</span><strong>Ice Shelf</strong><small>high cliffs · narrow clearance</small><em id="northIntel">No hits</em></button>
+    <button class="frontCard active" data-front="east"><span class="dir">EAST</span><strong>Ridge Pass</strong><small>broken islands · staggered ridge</small><em id="eastIntel">No hits</em></button>
+    <div class="globeMark" aria-hidden="true"><div class="globeCore">✦</div><span>GLOBAL<br>COMMAND</span></div>
+    <button class="frontCard" data-front="south"><span class="dir">SOUTH</span><strong>Dune Line</strong><small>low berms · long arcs</small><em id="southIntel">No hits</em></button>
+    <div class="frontCard home"><span class="dir">WEST</span><strong>Your Front</strong><small>home battery · holding</small><em id="westIntel">Fleet ready</em></div>
+  </section>
 
   <div class="layout">
     <section class="stage">
@@ -87,7 +96,7 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
           <h2>Firing solution</h2>
           <span class="stateChip">Live plot</span>
         </div>
-        <div class="kicker">Obstacle test · Ridge 05</div>
+        <div class="kicker" id="terrainLabel">East terrain · Ridge Pass</div>
       </div>
       <div class="panelBody">
 
@@ -112,7 +121,7 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 
       <div id="status" class="status">Adjust the shot. Clear the ridge or hit it.</div>
 
-      <div class="note">The reticle is fixed to the board plane. The shell rises above the chart in world space. The ridge has real height and can stop a low shot.</div>
+      <div class="note" id="terrainNote">The reticle stays on the board plane. Each theater has a different raised obstacle profile and keeps its own shot history.</div>
 
       <div class="legend">
         Camera slows while aiming · X = direct hit · O = miss/obstacle.
@@ -142,6 +151,8 @@ var status=document.getElementById("status");
 var callout=document.getElementById("callout");
 var orbitLabel=document.getElementById("orbitLabel");
 var volleyLabel=document.getElementById("volleyLabel");
+var terrainLabel=document.getElementById("terrainLabel");
+var terrainNote=document.getElementById("terrainNote");
 
 if(!ctx){
   status.textContent="Canvas rendering is unavailable in this browser.";
@@ -151,20 +162,56 @@ if(!ctx){
 var dpr=Math.min(2,window.devicePixelRatio||1);
 var cssW=1000,cssH=700;
 var gun={x:8,y:1,z:50};
-var target={x:88,z:50,r:5};
+var currentFront="east";
+var profiles={
+  north:{
+    title:"North Theater · Ice Shelf",
+    label:"North terrain · Ice Shelf",
+    note:"Tall shelf walls force a high, disciplined arc. The central gap is narrow and punishes low power.",
+    target:{x:86,z:50,r:5},
+    obstacles:[
+      {x0:43,x1:50,z0:15,z1:35,h:25},
+      {x0:43,x1:50,z0:35,z1:46,h:30},
+      {x0:43,x1:50,z0:56,z1:69,h:29},
+      {x0:43,x1:50,z0:69,z1:87,h:23}
+    ],
+    history:[],hits:0
+  },
+  east:{
+    title:"East Theater · Ridge Pass",
+    label:"East terrain · Ridge Pass",
+    note:"A staggered ridge divides the chart. Learn the clearance and walk shots through the broken high ground.",
+    target:{x:88,z:50,r:5},
+    obstacles:[
+      {x0:47,x1:55,z0:18,z1:35,h:12},
+      {x0:47,x1:55,z0:35,z1:48,h:18},
+      {x0:47,x1:55,z0:48,z1:62,h:24},
+      {x0:47,x1:55,z0:62,z1:77,h:17},
+      {x0:47,x1:55,z0:77,z1:86,h:11}
+    ],
+    history:[],hits:0
+  },
+  south:{
+    title:"South Theater · Dune Line",
+    label:"South terrain · Dune Line",
+    note:"Low berms encourage flatter, longer shots. Too much loft wastes range; too little clips the dune line.",
+    target:{x:91,z:50,r:5},
+    obstacles:[
+      {x0:38,x1:46,z0:10,z1:38,h:8},
+      {x0:47,x1:56,z0:34,z1:68,h:11},
+      {x0:58,x1:65,z0:62,z1:91,h:7}
+    ],
+    history:[],hits:0
+  }
+};
+var target=profiles[currentFront].target;
 var gravity=75;
 var shot=null;
-var history=[];
+var history=profiles[currentFront].history;
 var volley=1;
 var aimingUntil=0;
 
-var ridge=[
-  {x0:47,x1:55,z0:18,z1:35,h:12},
-  {x0:47,x1:55,z0:35,z1:48,h:18},
-  {x0:47,x1:55,z0:48,z1:62,h:24},
-  {x0:47,x1:55,z0:62,z1:77,h:17},
-  {x0:47,x1:55,z0:77,z1:86,h:11}
-];
+function currentObstacles(){return profiles[currentFront].obstacles;}
 
 var palettes={
   notebook:{bg:"#f7f1e4",board:"#edf5f6",grid:"rgba(49,112,158,.25)",ink:"#12375d",red:"#a33831",top:"#cfc6a9",side:"#aaa085",shadow:"rgba(20,30,38,.16)"},
@@ -234,8 +281,9 @@ function drawBoard(theta){
 }
 
 function drawRidge(theta){
-  for(var i=0;i<ridge.length;i++){
-    var b=ridge[i];
+  var obs=currentObstacles();
+  for(var i=0;i<obs.length;i++){
+    var b=obs[i];
     poly([[b.x0,0,b.z0],[b.x1,0,b.z0],[b.x1,b.h,b.z0],[b.x0,b.h,b.z0]],pal.side,pal.ink,theta);
     poly([[b.x1,0,b.z0],[b.x1,0,b.z1],[b.x1,b.h,b.z1],[b.x1,b.h,b.z0]],pal.side,pal.ink,theta);
     poly([[b.x0,b.h,b.z0],[b.x1,b.h,b.z0],[b.x1,b.h,b.z1],[b.x0,b.h,b.z1]],pal.top,pal.ink,theta);
@@ -243,8 +291,9 @@ function drawRidge(theta){
 }
 
 function ridgeHeightAt(x,z){
-  for(var i=0;i<ridge.length;i++){
-    var b=ridge[i];
+  var obs=currentObstacles();
+  for(var i=0;i<obs.length;i++){
+    var b=obs[i];
     if(x>=b.x0&&x<=b.x1&&z>=b.z0&&z<=b.z1)return b.h;
   }
   return 0;
@@ -412,7 +461,9 @@ function resolveShot(sol){
     }
   }
 
-  history.push({x:Math.max(0,Math.min(100,x)),z:gun.z,kind:kind==="hit"?"hit":"miss"});
+  history.push({x:Math.max(0,Math.min(100,x)),z:gun.z,kind:kind==="hit"?"hit":"miss",angle:sol.deg,power:sol.power});
+  if(kind==="hit")profiles[currentFront].hits++;
+  updateFrontIntel();
   if(history.length>9)history.shift();
 
   previousVal.textContent=sol.deg+"° / "+sol.power+"% → "+(kind==="ridge"?"RIDGE":Math.round(x));
@@ -446,7 +497,8 @@ function updateReadout(){
   pathVal.textContent=sol.collision?"BLOCKED":"CLEAR";
   pathVal.style.color=sol.collision?"var(--red)":"var(--ink)";
 
-  var testX=51;
+  var obs=currentObstacles();
+  var testX=obs.length?((obs[0].x0+obs[0].x1)/2):51;
   var testT=(testX-gun.x)/sol.vx;
   var yAtRidge=gun.y+sol.vy*testT-.5*gravity*testT*testT;
   var ridgeH=ridgeHeightAt(testX,gun.z);
@@ -478,6 +530,32 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 
+function updateFrontIntel(){
+  ["north","east","south"].forEach(function(front){
+    var el=document.getElementById(front+"Intel");
+    var hits=profiles[front].hits;
+    el.textContent=hits?(hits+" confirmed hit"+(hits===1?"":"s")):"No hits";
+  });
+}
+function switchFront(front){
+  if(!profiles[front]||shot)return;
+  currentFront=front;
+  target=profiles[front].target;
+  history=profiles[front].history;
+  document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){
+    btn.classList.toggle("active",btn.getAttribute("data-front")===front);
+  });
+  document.querySelector(".hud > div:first-child").childNodes[0].nodeValue=profiles[front].title;
+  terrainLabel.textContent=profiles[front].label;
+  terrainNote.textContent=profiles[front].note;
+  previousVal.textContent=history.length?(history[history.length-1].angle+"° / "+history[history.length-1].power+"%"):"—";
+  status.textContent="Targeting "+profiles[front].title+". Read the terrain and plot your shot.";
+  updateReadout();
+}
+document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){
+  btn.addEventListener("click",function(){switchFront(this.getAttribute("data-front"));});
+});
+
 angle.addEventListener("input",aimChanged);
 power.addEventListener("input",aimChanged);
 fire.addEventListener("click",fireShot);
@@ -488,6 +566,7 @@ theme.addEventListener("change",function(){
   pal=palettes[this.value];
 });
 
+updateFrontIntel();
 updateReadout();
 requestAnimationFrame(frame);
 })();
@@ -515,6 +594,48 @@ body.blueprint .fire{background:linear-gradient(180deg,#a8ecff 0%,#75d9fa 100%);
 body.blueprint .status{background:#3b5363;border-color:#ff8a84}
 </style>
 <style>
+.frontbar{
+  display:grid;
+  grid-template-columns:1fr 1fr 118px 1fr 1fr;
+  gap:9px;
+  align-items:stretch;
+  margin:0 0 12px;
+}
+.frontCard{
+  position:relative;
+  min-height:84px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--panel);
+  color:var(--ink);
+  text-align:left;
+  cursor:pointer;
+  box-shadow:0 4px 12px rgba(30,40,48,.08);
+  transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease;
+}
+.frontCard:hover{transform:translateY(-1px);box-shadow:0 7px 16px rgba(30,40,48,.12)}
+.frontCard.active{border:2px solid var(--red);box-shadow:0 0 0 3px rgba(163,56,49,.08),0 7px 16px rgba(30,40,48,.12)}
+.frontCard.home{cursor:default;border-style:dashed}
+.frontCard .dir{display:block;font-family:var(--display);font-size:13px;font-weight:800;letter-spacing:.11em;color:var(--red)}
+.frontCard strong{display:block;margin-top:2px;font-family:var(--display);font-size:20px;line-height:1;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.frontCard small{display:block;margin-top:5px;color:var(--muted);font-size:11px;line-height:1.3}
+.frontCard em{display:inline-block;margin-top:6px;padding:3px 6px;border-radius:999px;background:var(--chip);color:var(--ink2);font-style:normal;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.globeMark{
+  display:grid;place-items:center;align-content:center;
+  min-height:84px;border:1px solid var(--line);border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.55),rgba(255,255,255,.08) 45%,rgba(0,0,0,.05) 100%),var(--panel);
+  color:var(--ink);box-shadow:0 4px 12px rgba(30,40,48,.08);text-align:center
+}
+.globeCore{font-size:24px;line-height:1}
+.globeMark span{font-size:8px;font-weight:800;letter-spacing:.11em;line-height:1.2}
+body.blueprint .frontCard{background:#0f2e47}
+body.blueprint .globeMark{background:radial-gradient(circle at 35% 30%,#1e5878,#0b2538 70%)}
+body.warroom .frontCard{background:#ece4c8}
+body.warroom .globeMark{background:radial-gradient(circle at 35% 30%,#f2ead0,#cfc5a3 70%)}
+@media(max-width:900px){
+  .frontbar{grid-template-columns:1fr 1fr;}.globeMark{display:none}.frontCard{min-height:76px}
+}
 .stage:after{
   content:"";
   position:absolute;
