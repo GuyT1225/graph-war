@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10 — Four-Front 2.5D</title>
+<title>Graph War V0.10.1 — Return Fire</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -58,8 +58,8 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10 FOUR-FRONT</span></h1>
-      <div class="sub">Four-front 2.5D artillery: choose a theater, read its terrain, solve the shot, and carry separate intel across the war.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.1 RETURN FIRE</span></h1>
+      <div class="sub">Four-front 2.5D artillery with return volleys: fire, take incoming rounds, assess damage, and replot.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -207,7 +207,11 @@ var profiles={
 var target=profiles[currentFront].target;
 var gravity=75;
 var shot=null;
+var incomingShot=null;
+var returningFire=false;
 var history=profiles[currentFront].history;
+var homeDamage=0;
+var homeMarks=[];
 var volley=1;
 var aimingUntil=0;
 
@@ -359,6 +363,25 @@ function drawTarget(theta){
   drawCircleOnPlane(target.x,target.z,target.r,hit?pal.red:"rgba(160,60,50,.30)",theta,true);
 }
 
+function drawHomeMarks(theta){
+  homeMarks.forEach(function(h){
+    var p=proj(h.x,.35,h.z,theta);
+    ctx.save();
+    ctx.strokeStyle=h.hit?pal.red:pal.ink;
+    ctx.globalAlpha=h.hit?.78:.46;
+    ctx.lineWidth=h.hit?3:2;
+    ctx.beginPath();
+    if(h.hit){
+      ctx.moveTo(p.x-10,p.y-10);ctx.lineTo(p.x+10,p.y+10);
+      ctx.moveTo(p.x+10,p.y-10);ctx.lineTo(p.x-10,p.y+10);
+    }else{
+      ctx.arc(p.x,p.y,7,0,Math.PI*2);
+    }
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
 function drawHistory(theta){
   history.forEach(function(h){
     var p=proj(h.x,.3,h.z,theta);
@@ -397,6 +420,46 @@ function drawPreview(sol,theta){
 
   var retX=Math.max(0,Math.min(100,sol.landX));
   drawCircleOnPlane(retX,gun.z,4.5,sol.collision?pal.red:pal.ink,theta,true);
+}
+
+function incomingPoint(s,t){
+  var omt=1-t;
+  return{
+    x:omt*omt*s.start.x+2*omt*t*s.control.x+t*t*s.end.x,
+    y:omt*omt*s.start.y+2*omt*t*s.control.y+t*t*s.end.y,
+    z:omt*omt*s.start.z+2*omt*t*s.control.z+t*t*s.end.z
+  };
+}
+function drawIncomingShot(now,theta){
+  if(!incomingShot)return;
+  var q=Math.min(1,(now-incomingShot.startTime)/incomingShot.duration);
+  var p3=incomingPoint(incomingShot,q);
+  var p=proj(p3.x,p3.y,p3.z,theta);
+
+  ctx.save();
+  ctx.strokeStyle=pal.red;
+  ctx.globalAlpha=.58;
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  var begin=Math.max(0,q-.22);
+  for(var i=0;i<=22;i++){
+    var qi=begin+(q-begin)*i/22;
+    var wp=incomingPoint(incomingShot,qi);
+    var sp=proj(wp.x,wp.y,wp.z,theta);
+    if(i===0)ctx.moveTo(sp.x,sp.y);else ctx.lineTo(sp.x,sp.y);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle=pal.red;
+  ctx.beginPath();
+  ctx.arc(p.x,p.y,5.5,0,Math.PI*2);
+  ctx.fill();
+
+  if(q>=1&&!incomingShot.done){
+    incomingShot.done=true;
+    resolveIncoming(incomingShot);
+  }
 }
 
 function drawShot(now,theta){
@@ -467,15 +530,13 @@ function resolveShot(sol){
   if(history.length>9)history.shift();
 
   previousVal.textContent=sol.deg+"° / "+sol.power+"% → "+(kind==="ridge"?"RIDGE":Math.round(x));
-  volley++;
-  volleyLabel.textContent="Volley "+volley;
-  fire.disabled=false;
   shot=null;
   updateReadout();
+  setTimeout(beginReturnVolley,520);
 }
 
 function fireShot(){
-  if(shot)return;
+  if(shot||returningFire)return;
   var sol=solution();
   shot={
     sol:sol,
@@ -487,6 +548,71 @@ function fireShot(){
   fire.disabled=true;
   status.textContent="SHOT AWAY — watch the ridge clearance.";
   flash("SHOT AWAY");
+}
+
+function incomingSpec(front,index){
+  var specs={
+    north:{peak:46,duration:1120,z:38,label:"NORTH"},
+    east:{peak:31,duration:930,z:50,label:"EAST"},
+    south:{peak:18,duration:760,z:63,label:"SOUTH"}
+  };
+  var s=specs[front];
+  var hit=Math.random()<.30;
+  var endZ=50+(Math.random()*14-7);
+  var endX=hit?gun.x+2+(Math.random()*4):gun.x+10+(Math.random()*12);
+  return{
+    front:front,label:s.label,hit:hit,
+    start:{x:96,y:2,z:s.z},
+    control:{x:54,y:s.peak,z:(s.z+endZ)/2},
+    end:{x:endX,y:.4,z:endZ},
+    startTime:0,duration:s.duration,done:false,index:index
+  };
+}
+function beginReturnVolley(){
+  returningFire=true;
+  fire.disabled=true;
+  status.textContent="INCOMING VOLLEY — North, East, and South are firing back.";
+  flash("INCOMING!");
+  orbitLabel.textContent="Camera: tracking return fire";
+  runIncomingFront(["north","east","south"],0);
+}
+function runIncomingFront(order,index){
+  if(index>=order.length){
+    incomingShot=null;
+    returningFire=false;
+    volley++;
+    volleyLabel.textContent="Volley "+volley;
+    orbitLabel.textContent="Camera: slow orbit";
+    document.getElementById("westIntel").textContent=homeDamage?(homeDamage+" hit"+(homeDamage===1?"":"s")+" sustained"):"Fleet ready";
+    status.textContent=homeDamage?"RETURN FIRE RESOLVED — West has sustained "+homeDamage+" hit"+(homeDamage===1?"":"s")+".":"RETURN FIRE RESOLVED — West is still holding.";
+    fire.disabled=false;
+    return;
+  }
+  incomingShot=incomingSpec(order[index],index);
+  incomingShot.startTime=performance.now();
+  status.textContent=order[index].toUpperCase()+" FRONT — incoming round.";
+  setTimeout(function(){
+    if(incomingShot&&incomingShot.front===order[index]&&!incomingShot.done){
+      // render loop resolves it
+    }
+  },50);
+}
+function resolveIncoming(s){
+  homeMarks.push({x:s.end.x,z:s.end.z,hit:s.hit,front:s.front});
+  if(homeMarks.length>12)homeMarks.shift();
+  if(s.hit){
+    homeDamage++;
+    flash(s.label+" HIT");
+    status.textContent=s.label+" FRONT scored a hit on West.";
+  }else{
+    flash("SPLASH");
+    status.textContent=s.label+" FRONT missed West.";
+  }
+  document.getElementById("westIntel").textContent=homeDamage?(homeDamage+" hit"+(homeDamage===1?"":"s")+" sustained"):"Fleet ready";
+  var order=["north","east","south"];
+  var next=s.index+1;
+  incomingShot=null;
+  setTimeout(function(){runIncomingFront(order,next);},260);
 }
 
 function updateReadout(){
@@ -522,10 +648,12 @@ function frame(now){
   drawBoard(theta);
   drawRidge(theta);
   drawHistory(theta);
+  drawHomeMarks(theta);
   drawGun(theta);
   drawTarget(theta);
-  drawPreview(solution(),theta);
+  if(!returningFire)drawPreview(solution(),theta);
   drawShot(now,theta);
+  drawIncomingShot(now,theta);
 
   requestAnimationFrame(frame);
 }
@@ -538,7 +666,7 @@ function updateFrontIntel(){
   });
 }
 function switchFront(front){
-  if(!profiles[front]||shot)return;
+  if(!profiles[front]||shot||returningFire)return;
   currentFront=front;
   target=profiles[front].target;
   history=profiles[front].history;
