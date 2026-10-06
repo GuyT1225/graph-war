@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.5 — Oriented Battlefields</title>
+<title>Graph War V0.10.6 — Battlefield Fleet Presence</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -58,8 +58,8 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.5 BATTLEFIELD</span></h1>
-      <div class="sub">Each theater now faces its real cardinal direction, while contacts, revealed ships, damage states, wrecks, and West fleet attrition live directly on the tactical board.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.6 FLEET PRESENCE</span></h1>
+      <div class="sub">Fleet formations now dominate the battlefield: larger class-specific hulls, stronger contact zones, wakes, shadows, damage halos, wreck debris, and distinct formations for every theater.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -227,21 +227,27 @@ var westFleet=[
 ];
 
 var fleetPositions={
-  north:[{x:83,z:32},{x:88,z:50},{x:82,z:70}],
-  east:[{x:83,z:31},{x:89,z:50},{x:84,z:70}],
-  south:[{x:84,z:30},{x:91,z:50},{x:84,z:72}]
+  north:[{x:79,z:27,heading:.10},{x:88,z:49,heading:-.06},{x:76,z:73,heading:.16}],
+  east:[{x:78,z:34,heading:-.10},{x:90,z:51,heading:.03},{x:83,z:75,heading:-.16}],
+  south:[{x:77,z:28,heading:.18},{x:91,z:54,heading:-.04},{x:72,z:76,heading:-.12}]
 };
-var westPositions=[{x:16,z:36},{x:14,z:50},{x:16,z:65}];
+var westPositions=[
+  {x:15,z:32,heading:.06},
+  {x:19,z:51,heading:-.03},
+  {x:14,z:71,heading:.10}
+];
 
 ["north","east","south"].forEach(function(front){
   profiles[front].fleet.forEach(function(ship,i){
     ship.x=fleetPositions[front][i].x;
     ship.z=fleetPositions[front][i].z;
+    ship.heading=fleetPositions[front][i].heading||0;
   });
 });
 westFleet.forEach(function(ship,i){
   ship.x=westPositions[i].x;
   ship.z=westPositions[i].z;
+  ship.heading=westPositions[i].heading||0;
 });
 
 function activeEnemyShip(front){
@@ -425,59 +431,173 @@ function drawGun(theta){
 }
 
 function shipWorldSize(ship){
-  if(ship.code==="CV")return{len:10,w:3.4};
-  if(ship.code==="CA")return{len:8,w:2.9};
-  return{len:6,w:2.4};
+  if(ship.code==="CV")return{len:15,w:5.6,label:"CARRIER"};
+  if(ship.code==="CA")return{len:12,w:4.8,label:"CRUISER"};
+  return{len:9,w:3.8,label:"DESTROYER"};
+}
+function shipHullPoints(ship,sz){
+  var h=ship.heading||0;
+  var ch=Math.cos(h),sh=Math.sin(h);
+  var raw=[
+    [-sz.len/2,0],[-sz.len*.32,-sz.w/2],[sz.len*.28,-sz.w/2],
+    [sz.len/2,0],[sz.len*.28,sz.w/2],[-sz.len*.32,sz.w/2]
+  ];
+  return raw.map(function(q){
+    return[
+      ship.x+q[0]*ch-q[1]*sh,
+      .75,
+      ship.z+q[0]*sh+q[1]*ch
+    ];
+  });
+}
+function drawWake(ship,theta,state){
+  if(state==="sunk")return;
+  var h=ship.heading||0,sz=shipWorldSize(ship);
+  var bx=ship.x-Math.cos(h)*sz.len*.55;
+  var bz=ship.z-Math.sin(h)*sz.len*.55;
+  ctx.save();
+  ctx.strokeStyle=pal.ink;
+  ctx.globalAlpha=.16;
+  ctx.lineWidth=1.5;
+  ctx.setLineDash([4,5]);
+  [-1,1].forEach(function(side){
+    var offset=side*sz.w*.28;
+    var ox=-Math.sin(h)*offset,oz=Math.cos(h)*offset;
+    line([bx+ox,.13,bz+oz],[bx-Math.cos(h)*8+ox,.13,bz-Math.sin(h)*8+oz],pal.ink,1.5,theta,[4,5]);
+  });
+  ctx.restore();
+}
+function drawContactZone(ship,theta){
+  var p=proj(ship.x,.3,ship.z,theta);
+  ctx.save();
+  ctx.globalAlpha=.56;
+  ctx.strokeStyle=pal.ink;
+  ctx.lineWidth=2;
+  ctx.setLineDash([6,6]);
+  ctx.beginPath();
+  ctx.ellipse(p.x,p.y,34,15,0,0,Math.PI*2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha=.11;
+  ctx.fillStyle=pal.ink;
+  ctx.beginPath();
+  ctx.ellipse(p.x,p.y,31,12,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha=.72;
+  ctx.font="800 10px "+getComputedStyle(document.body).getPropertyValue("--ui");
+  ctx.textAlign="center";
+  ctx.fillText("UNKNOWN CONTACT",p.x,p.y-20);
+  ctx.font="800 18px "+getComputedStyle(document.body).getPropertyValue("--display");
+  ctx.fillText("?",p.x,p.y+6);
+  ctx.restore();
+}
+function drawShipImpactHistory(ship,theta,state){
+  if(state==="intact")return;
+  var p=proj(ship.x,.4,ship.z,theta);
+  ctx.save();
+  ctx.strokeStyle=state==="damaged"?"#c16e37":pal.red;
+  ctx.globalAlpha=state==="sunk"?.85:.62;
+  ctx.lineWidth=2;
+  for(var i=0;i<(state==="damaged"?2:4);i++){
+    var ang=(i*1.8)+(ship.x+ship.z)*.07;
+    var r=17+i*5;
+    ctx.beginPath();
+    ctx.arc(p.x+Math.cos(ang)*r,p.y+Math.sin(ang)*r*.45,3+i*.4,0,Math.PI*2);
+    ctx.stroke();
+  }
+  if(state==="critical"||state==="sunk"){
+    ctx.setLineDash([5,5]);
+    ctx.beginPath();ctx.arc(p.x,p.y,state==="sunk"?31:27,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.restore();
 }
 function drawWorldShip(ship,theta,isEnemy){
-  var p=proj(ship.x,.7,ship.z,theta);
+  var p=proj(ship.x,.8,ship.z,theta);
   var state=shipState(ship);
   var hidden=isEnemy&&!ship.revealed&&state==="intact";
-  if(hidden){
-    drawCircleOnPlane(ship.x,ship.z,5.4,"rgba(80,100,115,.46)",theta,true);
+  if(ship.justHit){
     ctx.save();
-    ctx.fillStyle=pal.ink;
-    ctx.globalAlpha=.52;
-    ctx.font="700 15px "+getComputedStyle(document.body).getPropertyValue("--display");
-    ctx.textAlign="center";
-    ctx.fillText("?",p.x,p.y+5);
+    ctx.fillStyle=pal.red;
+    ctx.globalAlpha=.18+.12*Math.sin(performance.now()/70);
+    ctx.beginPath();ctx.arc(p.x,p.y,38,0,Math.PI*2);ctx.fill();
     ctx.restore();
+  }
+  if(hidden){
+    drawContactZone(ship,theta);
     return;
   }
+
   var sz=shipWorldSize(ship);
-  var x0=ship.x-sz.len/2,x1=ship.x+sz.len/2;
-  var z0=ship.z-sz.w/2,z1=ship.z+sz.w/2;
-  var fill=state==="sunk"?"rgba(90,95,90,.28)":(state==="critical"?pal.red:(state==="damaged"?"#b66c32":pal.ink));
+  drawWake(ship,theta,state);
+
+  // Ground shadow anchors the hull into the board.
+  var shadow=proj(ship.x,.15,ship.z,theta);
   ctx.save();
-  ctx.globalAlpha=state==="sunk"?.48:.88;
-  poly([[x0,.6,ship.z],[x0+1,.6,z0],[x1-1,.6,z0],[x1,.6,ship.z],[x1-1,.6,z1],[x0+1,.6,z1]],fill,pal.ink,theta);
+  ctx.fillStyle=pal.shadow;
+  ctx.globalAlpha=state==="sunk"?.16:.28;
+  ctx.beginPath();
+  ctx.ellipse(shadow.x+5,shadow.y+6,sz.len*2.25,Math.max(5,sz.w*1.3),0,0,Math.PI*2);
+  ctx.fill();
   ctx.restore();
+
+  var fill=state==="sunk"?"rgba(90,95,90,.34)":(state==="critical"?pal.red:(state==="damaged"?"#b66c32":pal.ink));
+  ctx.save();
+  ctx.globalAlpha=state==="sunk"?.55:.96;
+  poly(shipHullPoints(ship,sz),fill,pal.ink,theta);
+  ctx.restore();
+
+  // Superstructure gives each silhouette a little more mass/class identity.
+  var h=ship.heading||0;
+  var superLen=ship.code==="CV"?6:(ship.code==="CA"?4.6:3.4);
+  var superW=ship.code==="CV"?2.2:(ship.code==="CA"?2:1.6);
+  var centerOffset=ship.code==="CV"?-1.8:0;
+  var cx=ship.x+Math.cos(h)*centerOffset,cz=ship.z+Math.sin(h)*centerOffset;
+  var ch=Math.cos(h),sh=Math.sin(h);
+  poly([
+    [cx-superLen/2*ch+superW/2*sh,1.2,cz-superLen/2*sh-superW/2*ch],
+    [cx+superLen/2*ch+superW/2*sh,1.2,cz+superLen/2*sh-superW/2*ch],
+    [cx+superLen/2*ch-superW/2*sh,1.2,cz+superLen/2*sh+superW/2*ch],
+    [cx-superLen/2*ch-superW/2*sh,1.2,cz-superLen/2*sh+superW/2*ch]
+  ],fill,pal.ink,theta);
+
+  drawShipImpactHistory(ship,theta,state);
 
   if(state==="damaged"||state==="critical"||state==="sunk"){
     ctx.save();
-    ctx.strokeStyle=state==="sunk"?pal.red:"#d66a44";
-    ctx.lineWidth=state==="critical"?4:3;
+    ctx.strokeStyle=state==="sunk"?pal.red:"#e17a3f";
+    ctx.lineWidth=state==="critical"?5:3;
     ctx.beginPath();
-    ctx.moveTo(p.x-8,p.y-8);ctx.lineTo(p.x+8,p.y+8);
-    if(state==="sunk"){ctx.moveTo(p.x+8,p.y-8);ctx.lineTo(p.x-8,p.y+8);}
+    ctx.moveTo(p.x-12,p.y-11);ctx.lineTo(p.x+11,p.y+10);
+    if(state==="critical"||state==="sunk"){ctx.moveTo(p.x+10,p.y-10);ctx.lineTo(p.x-9,p.y+9);}
     ctx.stroke();
     ctx.restore();
   }
   if(state==="critical"){
     ctx.save();
     ctx.fillStyle=pal.red;
-    ctx.globalAlpha=.25+.18*Math.sin(performance.now()/180);
-    ctx.beginPath();ctx.arc(p.x,p.y,17,0,Math.PI*2);ctx.fill();
-    ctx.globalAlpha=.62;
+    ctx.globalAlpha=.18+.16*Math.sin(performance.now()/180);
+    ctx.beginPath();ctx.arc(p.x,p.y,30,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=.72;
     ctx.fillStyle=pal.ink;
-    ctx.beginPath();ctx.arc(p.x+7,p.y-16,4,0,Math.PI*2);ctx.arc(p.x+11,p.y-22,3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();
+    ctx.arc(p.x+6,p.y-19,5,0,Math.PI*2);
+    ctx.arc(p.x+10,p.y-27,4,0,Math.PI*2);
+    ctx.arc(p.x+6,p.y-34,3,0,Math.PI*2);
+    ctx.fill();
     ctx.restore();
   }
+  if(state==="sunk"){
+    ctx.save();
+    ctx.strokeStyle=pal.red;ctx.lineWidth=4;ctx.globalAlpha=.78;
+    ctx.beginPath();ctx.moveTo(p.x-22,p.y-16);ctx.lineTo(p.x+22,p.y+16);ctx.stroke();
+    ctx.restore();
+  }
+
   ctx.save();
   ctx.fillStyle=state==="sunk"?pal.red:pal.ink;
-  ctx.font="800 10px "+getComputedStyle(document.body).getPropertyValue("--ui");
+  ctx.font="800 12px "+getComputedStyle(document.body).getPropertyValue("--ui");
   ctx.textAlign="center";
-  ctx.fillText(ship.code,p.x,p.y-10);
+  ctx.fillText(ship.code+" · "+sz.label,p.x,p.y-18);
   ctx.restore();
 }
 function drawBattlefieldFleets(theta){
@@ -747,6 +867,8 @@ function damageWestShip(){
   if(!alive.length)return null;
   var ship=alive[Math.floor(Math.random()*alive.length)];
   ship.hp=Math.max(0,ship.hp-1);
+  ship.justHit=true;
+  setTimeout(function(){ship.justHit=false;renderFleets();},900);
   return ship;
 }
 function incomingSpec(front,index){
