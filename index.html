@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.17 — Mobile Battlefield Breathing Room</title>
+<title>Graph War V0.10.18 — Damage Intel & Salvo Volley</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -515,13 +515,19 @@ body.warroom .howTo{background:rgba(255,248,220,.18)}
   .mobileBattleControls{bottom:53px}
 }
 </style>
+<style>
+@media(max-width:700px){
+  .mobileFire{transition:transform .12s ease,box-shadow .12s ease}
+  .mobileFire:not(:disabled){box-shadow:0 3px 10px rgba(0,0,0,.18)}
+}
+</style>
 </head>
 <body>
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.17 BATTLEFIELD VIEW</span></h1>
-      <div class="sub">A roomier mobile battlefield with a wider field of view and more visible war table.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.18 DAMAGE + SALVO</span></h1>
+      <div class="sub">Progressive damage intelligence and a three-coordinate salvo every third player shot.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -672,7 +678,24 @@ var sampleSfx={
   impact:new Audio("assets/audio/impact_pen.wav"),
   splash:new Audio("assets/audio/water_explode.opus")
 };
-Object.keys(sampleSfx).forEach(function(key){sampleSfx[key].preload="auto";});
+var sampleAudioPrimed=false;
+Object.keys(sampleSfx).forEach(function(key){
+  sampleSfx[key].preload="auto";
+  try{sampleSfx[key].load();}catch(err){}
+});
+function primeCombatAudio(){
+  unlockAudio();
+  if(sampleAudioPrimed)return;
+  sampleAudioPrimed=true;
+  Object.keys(sampleSfx).forEach(function(key){
+    try{
+      var a=sampleSfx[key].cloneNode(true);
+      a.volume=0;
+      var p=a.play();
+      if(p&&p.then)p.then(function(){setTimeout(function(){try{a.pause();a.currentTime=0;}catch(err){}},45);}).catch(function(){});
+    }catch(err){}
+  });
+}
 function playSample(key,level,rate){
   if(audioMuted)return false;
   var base=sampleSfx[key];if(!base)return false;
@@ -832,6 +855,7 @@ var westPositions=[
     ship.x=fleetPositions[front][i].x;
     ship.z=fleetPositions[front][i].z;
     ship.heading=fleetPositions[front][i].heading||0;
+    ship.intelHits=0;
   });
 });
 westFleet.forEach(function(ship,i){
@@ -856,6 +880,11 @@ var history=profiles[currentFront].history;
 var homeDamage=0;
 var homeMarks=[];
 var volley=1;
+var playerShotNumber=1;
+var salvoPlots=[];
+var salvoQueue=[];
+var salvoActive=false;
+var salvoRoundIndex=0;
 var aimingUntil=0;
 var bearing=0;
 var cameraTheta=-.20;
@@ -1069,17 +1098,21 @@ function drawWake(ship,theta,state){
 function drawContactZone(ship,theta,isActive,index){
   var p=proj(ship.x,.3,ship.z,theta),mobile=mobileDense();
   var contactColor=theaterColor(currentFront);
+  var intel=ship.intelHits||0;
+  var tracked=intel>0;
+  var rx=tracked?(isActive?34:31):(isActive?45:39);
+  var ry=tracked?(isActive?15:13):(isActive?20:17);
   ctx.save();
-  ctx.strokeStyle=contactColor;ctx.lineWidth=isActive?3.4:2.5;ctx.globalAlpha=isActive?.82:(mobile?.46:.66);ctx.setLineDash([8,6]);
-  ctx.beginPath();ctx.ellipse(p.x,p.y,isActive?45:39,isActive?20:17,0,0,Math.PI*2);ctx.stroke();
-  ctx.setLineDash([]);ctx.globalAlpha=isActive?.14:.07;ctx.fillStyle=contactColor;
-  ctx.beginPath();ctx.ellipse(p.x,p.y,isActive?41:35,isActive?16:13,0,0,Math.PI*2);ctx.fill();
-  ctx.globalAlpha=isActive?.92:.68;ctx.fillStyle=contactColor;ctx.textAlign="center";
-  ctx.font="800 "+(isActive?24:20)+"px "+getComputedStyle(document.body).getPropertyValue("--display");
-  ctx.fillText("?",p.x,p.y+7);
-  if(isActive||!mobile){
+  ctx.strokeStyle=contactColor;ctx.lineWidth=isActive?3.4:2.5;ctx.globalAlpha=isActive?.86:(mobile?.5:.7);ctx.setLineDash(tracked?[5,4]:[8,6]);
+  ctx.beginPath();ctx.ellipse(p.x,p.y,rx,ry,0,0,Math.PI*2);ctx.stroke();
+  ctx.setLineDash([]);ctx.globalAlpha=tracked?.18:(isActive?.14:.07);ctx.fillStyle=contactColor;
+  ctx.beginPath();ctx.ellipse(p.x,p.y,rx-4,Math.max(8,ry-4),0,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=isActive?.95:.72;ctx.fillStyle=contactColor;ctx.textAlign="center";
+  ctx.font="800 "+(tracked?18:(isActive?24:20))+"px "+getComputedStyle(document.body).getPropertyValue("--display");
+  ctx.fillText(tracked?"×":"?",p.x,p.y+6);
+  if(isActive||!mobile||tracked){
     ctx.font="800 "+(mobile?9:10)+"px "+getComputedStyle(document.body).getPropertyValue("--ui");
-    ctx.fillText(isActive?"TARGET CONTACT":"UNKNOWN CONTACT",p.x,p.y-(isActive?29:25));
+    ctx.fillText(tracked?"DAMAGED CONTACT":(isActive?"TARGET CONTACT":"UNKNOWN CONTACT"),p.x,p.y-(tracked?22:(isActive?29:25)));
   }
   ctx.restore();
 }
@@ -1117,7 +1150,7 @@ function drawShipClassDetails(ship,theta,state){
   }
 }
 function drawBoardHealth(ship,theta,state,isEnemy){
-  if(isEnemy&&!ship.revealed&&state==="intact")return;
+  if(isEnemy&&(ship.intelHits||0)<2&&state!=="sunk")return;
   var p=proj(ship.x,.8,ship.z,theta);
   var width=ship.code==="CV"?62:(ship.code==="CA"?52:44);
   var ratio=Math.max(0,ship.hp/ship.max);
@@ -1146,7 +1179,7 @@ function drawTargetBrackets(ship,theta){
 function drawWorldShip(ship,theta,isEnemy,isActive,index){
   var p=proj(ship.x,.8,ship.z,theta);
   var state=shipState(ship);
-  var hidden=isEnemy&&!ship.revealed&&state==="intact";
+  var hidden=isEnemy&&(ship.intelHits||0)<2&&state!=="sunk";
   var factionColor=shipFrontColor(isEnemy);
   if(ship.justHit){
     ctx.save();ctx.fillStyle=pal.red;ctx.globalAlpha=.22+.14*Math.sin(performance.now()/70);ctx.beginPath();ctx.arc(p.x,p.y,46,0,Math.PI*2);ctx.fill();ctx.restore();
@@ -1254,6 +1287,26 @@ function drawHistory(theta){
   });
 }
 
+function isSalvoTurn(){return playerShotNumber%3===0;}
+function updateFireUi(){
+  var text;
+  if(salvoActive)text="PLOT "+(salvoPlots.length+1)+"/3";
+  else if(isSalvoTurn())text="START SALVO";
+  else text=mobileDense()?"FIRE":"Lock & fire";
+  if(fire)fire.textContent=text;
+  if(mobileFire)mobileFire.textContent=text==="Lock & fire"?"FIRE":text;
+}
+function drawSalvoPlots(theta){
+  if(!salvoPlots.length)return;
+  salvoPlots.forEach(function(sol,index){
+    var x=Math.max(0,Math.min(100,sol.landX)),z=Math.max(0,Math.min(100,sol.landZ));
+    var p=proj(x,.28,z,theta);
+    ctx.save();ctx.strokeStyle=theaterColor("west");ctx.fillStyle=theaterColor("west");ctx.globalAlpha=.72;ctx.lineWidth=2.2;ctx.setLineDash([5,4]);
+    ctx.beginPath();ctx.arc(p.x,p.y,18,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.font="800 12px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(index+1),p.x,p.y);ctx.restore();
+  });
+}
+
 function drawPreview(sol,theta){
   var endT=sol.collision?sol.collision.t:sol.totalT;
   ctx.save();ctx.strokeStyle=sol.collision?pal.red:angleAimColor();ctx.globalAlpha=.52;ctx.lineWidth=2.8;ctx.setLineDash([8,7]);ctx.beginPath();
@@ -1301,44 +1354,83 @@ function drawShot(now,theta){
   ctx.stroke();ctx.restore();
   if(q>.16&&q<.92&&performance.now()-shellWhooshTimer>180){sfxWhoosh();shellWhooshTimer=performance.now();}
   var w=trajectoryPoint(shot.sol,t);var p=proj(w.x,w.y,w.z,theta);ctx.save();ctx.fillStyle=theaterColor("west");ctx.shadowColor=theaterColor("west");ctx.shadowBlur=10;ctx.beginPath();ctx.arc(p.x,p.y,7.5,0,Math.PI*2);ctx.fill();ctx.restore();
-  if(q>=1&&!shot.done){shot.done=true;resolveShot(shot.sol);}
+  if(q>=1&&!shot.done){shot.done=true;resolveShot(shot.sol,!!shot.salvo);}
 }
 
 function flash(text){
   callout.textContent=text;callout.classList.remove("show");void callout.offsetWidth;callout.classList.add("show");
 }
 
-function resolveShot(sol){
-  var x;var kind;var z;
+function recordShotResult(sol){
+  var x;var kind;var z;var message="";
   if(sol.collision){
-    x=sol.collision.x;z=sol.collision.z;kind="ridge";status.textContent="RIDGE STRIKE — raise the arc or change power.";flash("RIDGE STRIKE");sfxTerrain();
+    x=sol.collision.x;z=sol.collision.z;kind="ridge";message="RIDGE STRIKE";status.textContent="RIDGE STRIKE — raise the arc or change power.";flash("RIDGE STRIKE");sfxTerrain();
   }else{
     x=sol.landX;z=sol.landZ;var missDistance=target?Math.hypot(x-target.x,z-target.z):999;
     if(target&&missDistance<=target.r){
       kind="hit";var damageResult=damageEnemyShip(currentFront);
       if(damageResult&&damageResult.ship){
         var struckShip=damageResult.ship;var stateAfter=shipState(struckShip).toUpperCase();
-        status.textContent="DIRECT HIT — "+(damageResult.wasHidden?"CONTACT REVEALED · ":"")+struckShip.name+" "+stateAfter+".";
-      }else{status.textContent="DIRECT HIT — enemy fleet damaged.";}
-      flash(damageResult&&damageResult.wasHidden?"CONTACT!":"DIRECT HIT");sfxHit();
+        var intelText=damageResult.newlyTracked?"CONTACT DAMAGED — SEARCH AREA TIGHTENED · ":(damageResult.newlyRevealed?"TARGET FIXED · ":"");
+        status.textContent="DIRECT HIT — "+intelText+struckShip.name+" "+stateAfter+".";
+        message=damageResult.newlyTracked?"CONTACT TRACKED":(damageResult.newlyRevealed?"TARGET FIXED":"DIRECT HIT");
+      }else{status.textContent="DIRECT HIT — enemy fleet damaged.";message="DIRECT HIT";}
+      flash(message);sfxHit();
     }else{
       kind="miss";status.textContent=x>100?"LONG — shot left the chart.":"SPLASH — correct from the mark.";flash(x>100?"LONG":"SPLASH");sfxSplash();
     }
   }
-
   history.push({x:Math.max(0,Math.min(100,x)),z:Math.max(0,Math.min(100,z)),kind:kind==="hit"?"hit":"miss",angle:sol.deg,power:sol.power,bearing:sol.bearing});
   if(kind==="hit")profiles[currentFront].hits++;
-  lastAttackedFront=currentFront;updateFrontIntel();renderFleets();if(history.length>9)history.shift();
-  previousVal.textContent=formatBearing(sol.bearing)+" · "+sol.deg+"° / "+sol.power+"%";shot=null;updateReadout();setTimeout(beginReturnVolley,520);
+  lastAttackedFront=currentFront;updateFrontIntel();renderFleets();if(history.length>12)history.shift();
+  previousVal.textContent=formatBearing(sol.bearing)+" · "+sol.deg+"° / "+sol.power+"%";
+}
+
+function launchSalvoRound(index){
+  salvoRoundIndex=index;
+  if(index>=salvoQueue.length){
+    shot=null;salvoQueue=[];salvoPlots=[];salvoActive=false;playerShotNumber++;updateFireUi();updateReadout();
+    setTimeout(beginReturnVolley,600);return;
+  }
+  var sol=salvoQueue[index];
+  sfxCannon();
+  status.textContent="SALVO ROUND "+(index+1)+"/3 — SHOT AWAY.";
+  flash("SALVO "+(index+1));
+  shot={sol:sol,start:performance.now(),duration:1180,endT:sol.collision?sol.collision.t:sol.totalT,done:false,salvo:true};
+}
+
+function resolveShot(sol,fromSalvo){
+  recordShotResult(sol);
+  shot=null;updateReadout();
+  if(fromSalvo){
+    setTimeout(function(){launchSalvoRound(salvoRoundIndex+1);},260);
+  }else{
+    playerShotNumber++;updateFireUi();
+    setTimeout(beginReturnVolley,520);
+  }
 }
 
 function fireShot(){
   if(shot||returningFire)return;
-  unlockAudio();
+  primeCombatAudio();
+  if(isSalvoTurn()){
+    if(!salvoActive){salvoActive=true;salvoPlots=[];salvoQueue=[];}
+    var plotted=solution();
+    salvoPlots.push(Object.assign({},plotted));
+    status.textContent="SALVO PLOT "+salvoPlots.length+"/3 LOCKED"+(salvoPlots.length<3?" — adjust aim for next coordinate.":".");
+    flash("PLOT "+salvoPlots.length);
+    if(salvoPlots.length<3){updateFireUi();updateReadout();return;}
+    salvoQueue=salvoPlots.slice();
+    fire.disabled=true;if(mobileFire)mobileFire.disabled=true;
+    status.textContent="THREE-ROUND SALVO — firing plotted coordinates.";
+    launchSalvoRound(0);
+    return;
+  }
   sfxCannon();
   var sol=solution();shot={sol:sol,start:performance.now(),duration:1450,endT:sol.collision?sol.collision.t:sol.totalT,done:false};
   fire.disabled=true;if(mobileFire)mobileFire.disabled=true;status.textContent="SHOT AWAY — watch the ridge clearance.";flash("SHOT AWAY");
 }
+
 
 function fleetStrength(front){
   var fleet=profiles[front].fleet;var alive=fleet.filter(function(ship){return ship.hp>0;});if(!alive.length)return 0;
@@ -1347,8 +1439,14 @@ function fleetStrength(front){
 function frontEliminated(front){return profiles[front].fleet.every(function(ship){return ship.hp<=0;});}
 function damageEnemyShip(front){
   var fleet=profiles[front].fleet;var ship=fleet.find(function(s){return s.hp>0;});if(!ship)return null;
-  var wasHidden=!ship.revealed;ship.revealed=true;ship.hp=Math.max(0,ship.hp-1);ship.justHit=true;if(front===currentFront)target=activeTarget(front);
-  setTimeout(function(){ship.justHit=false;renderFleets();},900);return{ship:ship,wasHidden:wasHidden};
+  var priorIntel=ship.intelHits||0;
+  ship.intelHits=priorIntel+1;
+  ship.hp=Math.max(0,ship.hp-1);
+  ship.revealed=ship.intelHits>=2||ship.hp<=0;
+  ship.justHit=true;
+  if(front===currentFront)target=activeTarget(front);
+  setTimeout(function(){ship.justHit=false;renderFleets();},900);
+  return{ship:ship,priorIntel:priorIntel,intelHits:ship.intelHits,newlyTracked:priorIntel===0,newlyRevealed:priorIntel===1||ship.hp<=0};
 }
 function damageWestShip(preferred){
   var alive=westFleet.filter(function(ship){return ship.hp>0;});if(!alive.length)return null;
@@ -1386,7 +1484,7 @@ function runIncomingFront(order,index){
   if(index>=order.length){
     incomingShot=null;returningFire=false;volley++;volleyLabel.textContent="Volley "+volley;orbitLabel.textContent="Camera: slow orbit";updateFrontIntel();
     var aliveWest=westFleet.filter(function(ship){return ship.hp>0;}).length;
-    status.textContent=aliveWest<3?"RETURN FIRE RESOLVED — West fleet status updated.":"RETURN FIRE RESOLVED — West is still holding.";fire.disabled=false;if(mobileFire)mobileFire.disabled=false;return;
+    status.textContent=aliveWest<3?"RETURN FIRE RESOLVED — West fleet status updated.":"RETURN FIRE RESOLVED — West is still holding.";fire.disabled=false;if(mobileFire)mobileFire.disabled=false;updateFireUi();return;
   }
   sfxEnemyCannon();
   incomingShot=incomingSpec(order[index],index);incomingShot.order=order;incomingShot.startTime=performance.now();status.textContent=order[index].toUpperCase()+" FRONT — incoming round.";
@@ -1441,7 +1539,7 @@ function frame(now){
   var facing=theaterOrientation[currentFront]||0;
   var theta=facing+(-.08+Math.sin(now/4800)*.34*orbitScale);
   cameraTheta=theta;
-  drawBoard(theta);drawRidge(theta);drawHistory(theta);drawHomeMarks(theta);drawBattlefieldFleets(theta);drawGun(theta);drawTarget(theta);
+  drawBoard(theta);drawRidge(theta);drawHistory(theta);drawHomeMarks(theta);drawBattlefieldFleets(theta);drawGun(theta);drawTarget(theta);drawSalvoPlots(theta);
   if(!returningFire)drawPreview(solution(),theta);drawShot(now,theta);drawIncomingShot(now,theta);requestAnimationFrame(frame);
 }
 
@@ -1449,11 +1547,11 @@ function shipState(ship){
   if(ship.hp<=0)return "sunk";var ratio=ship.hp/ship.max;if(ratio<=.34)return "critical";if(ratio<1)return "damaged";return "intact";
 }
 function shipMarkup(ship,isEnemy){
-  var state=shipState(ship);var hidden=isEnemy&&!ship.revealed&&state==="intact";var label=hidden?"?":ship.code;var pips="";
+  var state=shipState(ship);var hidden=isEnemy&&(ship.intelHits||0)<2&&state!=="sunk";var label=hidden?((ship.intelHits||0)>0?"×":"?"):ship.code;var pips="";
   for(var i=0;i<ship.max;i++)pips+='<i class="'+(i<ship.hp?"live":"lost")+'"></i>';
   var classes="shipAvatar "+state+(hidden?" contact":" revealed")+(ship.justHit?" justHit":"");
   var fx=state==="critical"?'<span class="smoke">••</span>':(state==="sunk"?'<span class="wreck">×</span>':(state==="damaged"?'<span class="scar">／</span>':""));
-  return '<span class="'+classes+'" title="'+(hidden?"Unknown contact":ship.name+" · "+state)+'"><b>'+label+'</b><span class="hull">'+fx+'</span><span class="pips">'+pips+'</span><span class="stateText">'+(hidden?"CONTACT":state.toUpperCase())+'</span></span>';
+  return '<span class="'+classes+'" title="'+(hidden?((ship.intelHits||0)>0?"Damaged contact · location tightening":"Unknown contact"):ship.name+" · "+state)+'"><b>'+label+'</b><span class="hull">'+fx+'</span><span class="pips">'+pips+'</span><span class="stateText">'+(hidden?((ship.intelHits||0)>0?"TRACKED":"CONTACT"):state.toUpperCase())+'</span></span>';
 }
 function renderFleets(){
   ["north","east","south"].forEach(function(front){var host=document.getElementById(front+"Fleet");host.innerHTML=profiles[front].fleet.map(function(ship){return shipMarkup(ship,true);}).join("");});
@@ -1469,7 +1567,7 @@ function updateFrontIntel(){
   document.getElementById("westIntel").textContent=westAlive?((3-westAlive)?(3-westAlive)+" ship"+((3-westAlive)===1?"":"s")+" lost":"Fleet ready"):"Fleet destroyed";
 }
 function switchFront(front){
-  if(!profiles[front]||shot||returningFire)return;
+  if(!profiles[front]||shot||returningFire||salvoActive)return;
   currentFront=front;bearing=0;target=activeTarget(front);history=profiles[front].history;
   document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){btn.classList.toggle("active",btn.getAttribute("data-front")===front);});
   document.querySelector(".hud > div:first-child").childNodes[0].nodeValue=profiles[front].title;
@@ -1531,7 +1629,9 @@ audioVolume.addEventListener("change",function(){unlockAudio();if(!audioMuted)to
 
 theme.addEventListener("change",function(){document.body.classList.remove("blueprint","warroom");if(this.value!=="notebook")document.body.classList.add(this.value);pal=palettes[this.value];});
 
-renderFleets();updateFrontIntel();updateReadout();updateAudioUi();requestAnimationFrame(frame);
+document.addEventListener("pointerdown",primeCombatAudio,{once:true,passive:true});
+document.addEventListener("touchstart",primeCombatAudio,{once:true,passive:true});
+renderFleets();updateFrontIntel();updateReadout();updateAudioUi();updateFireUi();requestAnimationFrame(frame);
 })();
 </script>
 </body>
