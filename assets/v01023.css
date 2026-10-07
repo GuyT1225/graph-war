@@ -30,3 +30,24 @@ radial-gradient(circle at 62% 50%,#df9b4014 0 12%,transparent 13%),#020805}
 .musicSkip{border:1px solid var(--line);background:var(--button);color:var(--ink);min-height:32px;padding:5px 8px;font-size:10px;font-weight:800}
 body.warroom .musicSkip{background:#0a2112;color:#b0f7c0;border-color:#367f49}
 @media(max-width:600px){.bootMain:after{display:none}.bootManualGrid{grid-template-columns:1fr}.bootScope{height:74px}}
+
+/* Hotfix: allow expanded main-screen Field Guide to scroll on short/mobile viewports */
+#bootScreen{
+  overflow-y:auto;
+  overflow-x:hidden;
+  align-items:start;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+}
+.bootShell{
+  margin:clamp(12px,4vh,36px) auto;
+}
+#bootScreen .bootMain{
+  padding-bottom:30px;
+}
+@media(max-width:600px){
+  #bootScreen{place-items:start center}
+  .bootShell{width:min(94vw,720px);margin:10px auto 24px}
+  .bootMain{padding-bottom:24px}
+  .bootManual.open{margin-bottom:10px}
+}
