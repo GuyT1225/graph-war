@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.16 — Naval Audio Pass</title>
+<title>Graph War V0.10.17 — Mobile Battlefield Breathing Room</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -498,13 +498,30 @@ body.warroom .howTo{background:rgba(255,248,220,.18)}
   .mbcSlider:focus-within label strong{text-shadow:0 0 8px currentColor}
 }
 </style>
-<style>.audioCredit{font-size:9px;opacity:.58;letter-spacing:.04em;margin:4px 0 0}</style></head>
+<style>.audioCredit{font-size:9px;opacity:.58;letter-spacing:.04em;margin:4px 0 0}</style>
+<style>
+/* V0.10.17 mobile battlefield breathing room */
+@media(max-width:700px){
+  #scene{height:540px;flex:0 0 540px}
+  .mobileBattleControls{
+    bottom:57px;
+    padding:7px 8px 6px;
+    background:color-mix(in srgb,var(--panel) 72%,transparent);
+  }
+  .hud{top:7px}
+}
+@media(max-width:430px){
+  #scene{height:510px;flex-basis:510px}
+  .mobileBattleControls{bottom:53px}
+}
+</style>
+</head>
 <body>
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.16 NAVAL AUDIO</span></h1>
-      <div class="sub">Real CC0 naval cannon, impact, and splash recordings layered with arcade trajectory cues.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.17 BATTLEFIELD VIEW</span></h1>
+      <div class="sub">A roomier mobile battlefield with a wider field of view and more visible war table.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -895,6 +912,12 @@ function resize(){
 window.addEventListener("resize",resize);
 resize();
 
+function mobileBattleView(){return cssW<=700;}
+function projectionXScale(){return cssW/(mobileBattleView()?162:145);}
+function projectionZScale(){return cssH/(mobileBattleView()?392:380);}
+function projectionYScale(){return cssH/(mobileBattleView()?103:95);}
+function projectionBaseY(){return cssH*(mobileBattleView()?.54:.57);}
+
 function proj(x,y,z,theta){
   var dx=x-50;
   var dz=z-50;
@@ -902,8 +925,8 @@ function proj(x,y,z,theta){
   var st=Math.sin(theta);
   var rx=dx*ct-dz*st;
   var rz=dx*st+dz*ct;
-  var sx=cssW/2+rx*(cssW/145);
-  var sy=cssH*0.57+rz*(cssH/380)-y*(cssH/95);
+  var sx=cssW/2+rx*projectionXScale();
+  var sy=projectionBaseY()+rz*projectionZScale()-y*projectionYScale();
   return{x:sx,y:sy};
 }
 
@@ -1457,7 +1480,7 @@ function switchFront(front){
 document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){btn.addEventListener("click",function(){switchFront(this.getAttribute("data-front"));});});
 
 function canvasToWorld(clientX,clientY){
-  var rect=canvas.getBoundingClientRect();var sx=clientX-rect.left;var sy=clientY-rect.top;var rx=(sx-cssW/2)/(cssW/145);var rz=(sy-cssH*.57)/(cssH/380);
+  var rect=canvas.getBoundingClientRect();var sx=clientX-rect.left;var sy=clientY-rect.top;var rx=(sx-cssW/2)/projectionXScale();var rz=(sy-projectionBaseY())/projectionZScale();
   var ct=Math.cos(cameraTheta);var st=Math.sin(cameraTheta);var dx=rx*ct+rz*st;var dz=-rx*st+rz*ct;return{x:dx+50,z:dz+50};
 }
 function setBearingFromPointer(clientX,clientY){
