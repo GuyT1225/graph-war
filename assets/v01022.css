@@ -1,0 +1,38 @@
+/* Graph War V0.10.22 — Command Terminal launch screen + music UI */
+#bootScreen{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;overflow:hidden;background:#020705;color:#c9ffd6;font-family:"IBM Plex Sans",system-ui,sans-serif;transition:opacity .5s ease,visibility .5s ease}
+#bootScreen.dismissed{opacity:0;visibility:hidden;pointer-events:none}
+#bootScreen:before{content:"";position:absolute;inset:-12%;background:linear-gradient(rgba(75,255,128,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(75,255,128,.055) 1px,transparent 1px);background-size:42px 42px;transform:perspective(430px) rotateX(61deg) translateY(28%);transform-origin:center bottom;mask-image:linear-gradient(to bottom,transparent 5%,#000 44%,#000 100%);animation:gridDrift 12s linear infinite}
+#bootScreen:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(180deg,#70ff9208 0 1px,transparent 1px 4px),radial-gradient(circle at 50% 38%,#2dc95d16,transparent 34%),linear-gradient(180deg,transparent 60%,#0009);pointer-events:none}
+@keyframes gridDrift{to{background-position:0 42px,42px 0}}
+.bootShell{position:relative;z-index:1;width:min(92vw,680px);border:1px solid #3b8250;background:#061009eF;box-shadow:0 0 0 1px #7dff9d10,0 22px 70px #000c,inset 0 0 38px #3aff7010}
+.bootRail{display:flex;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #275c38;color:#5da870;font-size:9px;font-weight:800;letter-spacing:.18em}
+.bootMain{padding:36px 28px 30px}
+.bootEyebrow{color:#f0aa43;font-size:10px;font-weight:800;letter-spacing:.2em;margin-bottom:7px}
+.bootTitle{margin:0;font-family:"Rajdhani","Arial Narrow",sans-serif;font-size:clamp(58px,13vw,96px);font-weight:800;line-height:.82;letter-spacing:.055em;color:#d8ffe1;text-shadow:0 0 22px #59ff8424}
+.bootTag{margin:17px 0 28px;color:#7ca98a;font-size:13px;letter-spacing:.08em;max-width:480px}
+.bootScope{height:74px;margin:0 0 26px;border:1px solid #1e4e2e;position:relative;overflow:hidden;background:#030a06}
+.bootScope:before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:#55d77955}
+.bootScope:after{content:"";position:absolute;width:92px;height:92px;border:1px solid #e6a44666;border-radius:50%;left:62%;top:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 12px #e6a44608;animation:scopePulse 2.4s ease-in-out infinite}
+@keyframes scopePulse{50%{transform:translate(-50%,-50%) scale(1.14);opacity:.58}}
+.bootActions{display:grid;grid-template-columns:1fr auto;gap:10px}
+.bootDeploy,.bootSecondary{min-height:50px;border-radius:0;font:800 14px var(--ui);letter-spacing:.13em;text-transform:uppercase;cursor:pointer}
+.bootDeploy{border:1px solid #58b970;background:#10331c;color:#d8ffe1;box-shadow:inset 0 -3px #041209,0 0 16px #3cff6b14;text-align:left;padding:0 18px}
+.bootDeploy:before{content:"> ";color:#f0aa43}
+.bootSecondary{border:1px solid #315a3d;background:#08140d;color:#75ae86;padding:0 15px}
+.bootStatus{display:flex;justify-content:space-between;gap:14px;margin-top:18px;padding-top:11px;border-top:1px solid #1f4b2d;color:#4e8e60;font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase}
+.bootTrack{color:#91d3a4}
+.musicPanel{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.musicRow{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center}
+.musicToggle{border:1px solid var(--line);background:var(--button);color:var(--ink);min-height:32px;padding:5px 8px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.musicMeta{min-width:0;font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.musicMeta strong{display:block;color:var(--ink);font-size:11px}
+#musicVolume{width:100%;margin-top:8px}
+body.warroom .panel>.panelHead{background:#07160d!important;border-color:#2f6b40!important}
+body.warroom .panel>.panelBody{background:#07110b!important;color:#bcebc7!important}
+body.warroom .panel>.panelBody .control,body.warroom .panel>.panelBody .audioControls,body.warroom .panel>.panelBody .howTo,body.warroom .panel>.panelBody .readout,body.warroom .panel>.panelBody .legend,body.warroom .panel>.panelBody .note{color:#bcebc7!important}
+body.warroom .panel>.panelBody .metric{background:#09180f!important;border-color:#306f43!important}
+body.warroom .panel>.panelBody .metric span{color:#78b88a!important}
+body.warroom .panel>.panelBody .metric strong{color:#ceffd8!important}
+body.warroom .panel>.panelBody .note,body.warroom .panel>.panelBody .legend,body.warroom .panel>.panelBody .audioCredit{color:#729780!important}
+body.warroom .panel>.panelBody .howTo summary{background:#0a1c10!important;color:#c5f8cf!important}
+body.warroom .musicToggle{background:#0a2112;color:#b0f7c0;border-color:#367f49}
+@media(max-width:600px){.bootMain{padding:30px 19px 22px}.bootActions{grid-template-columns:1fr}.bootStatus{align-items:flex-start;flex-direction:column}.bootScope{height:64px}}
