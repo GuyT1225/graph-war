@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.6 — Battlefield Fleet Presence</title>
+<title>Graph War V0.10.7 — Dominant Board Warships</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -17,7 +17,7 @@ main{max-width:1420px;margin:auto;padding:14px}
 .top{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:12px;padding:10px 12px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,.34),rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.28);box-shadow:0 4px 14px rgba(20,30,38,.06)}
 h1{margin:0;color:var(--ink);font-family:var(--display);font-size:44px;line-height:.96;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
 .version{display:inline-block;margin-left:10px;padding:5px 9px;border:1px solid var(--line);border-radius:4px;font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.12em;vertical-align:middle;color:var(--ink2);background:rgba(255,255,255,.24)}
-.sub{margin-top:8px;color:var(--muted);font-size:16px;line-height:1.5;max-width:820px}
+.sub{margin-top:8px;color:var(--muted);font-size:16px;line-height:1.5;max-width:900px}
 .theme{display:flex;align-items:center;gap:10px;color:var(--ink);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
 .theme select{min-height:42px;padding:8px 12px;border:1.5px solid var(--ink2);border-radius:6px;background:var(--panel);color:var(--ink);font-size:14px;font-weight:600;text-transform:none;letter-spacing:0}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px}
@@ -58,8 +58,8 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.6 FLEET PRESENCE</span></h1>
-      <div class="sub">Fleet formations now dominate the battlefield: larger class-specific hulls, stronger contact zones, wakes, shadows, damage halos, wreck debris, and distinct formations for every theater.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.7 WARSHIPS</span></h1>
+      <div class="sub">Warships now read as battlefield actors, not tokens: larger class-specific silhouettes, active-target brackets, hull details, board health bars, stronger contacts, and persistent damage history.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -71,7 +71,6 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
     </div>
   </div>
 
-  
   <section class="frontbar" aria-label="Four front command table">
     <button class="frontCard" data-front="north"><span class="dir">NORTH</span><strong>Ice Shelf</strong><small>high cliffs · narrow clearance</small><div class="fleetStrip" id="northFleet"></div><em id="northIntel">No hits</em></button>
     <button class="frontCard active" data-front="east"><span class="dir">EAST</span><strong>Ridge Pass</strong><small>broken islands · staggered ridge</small><div class="fleetStrip" id="eastFleet"></div><em id="eastIntel">No hits</em></button>
@@ -255,7 +254,7 @@ function activeEnemyShip(front){
 }
 function activeTarget(front){
   var ship=activeEnemyShip(front);
-  return ship?{x:ship.x,z:ship.z,r:5}:null;
+  return ship?{x:ship.x,z:ship.z,r:6.2}:null;
 }
 var target=activeTarget(currentFront);
 var gravity=75;
@@ -361,9 +360,7 @@ function ridgeHeightAt(x,z){
   return 0;
 }
 
-function speed(){
-  return 50+(Number(power.value)*.45);
-}
+function speed(){return 50+(Number(power.value)*.45);}
 
 function solution(){
   var deg=Number(angle.value);
@@ -386,25 +383,14 @@ function solution(){
     var z=gun.z+vz*t;
     var y=gun.y+vy*t-.5*gravity*t*t;
     var h=ridgeHeightAt(x,z);
-    if(h>0&&y<=h){
-      collision={x:x,y:y,z:z,t:t,h:h};
-      break;
-    }
+    if(h>0&&y<=h){collision={x:x,y:y,z:z,t:t,h:h};break;}
   }
 
-  return{
-    deg:deg,power:Number(power.value),bearing:bearing,
-    vx:vx,vy:vy,vz:vz,totalT:totalT,
-    landX:landX,landZ:landZ,collision:collision
-  };
+  return{deg:deg,power:Number(power.value),bearing:bearing,vx:vx,vy:vy,vz:vz,totalT:totalT,landX:landX,landZ:landZ,collision:collision};
 }
 
 function trajectoryPoint(sol,t){
-  return{
-    x:gun.x+sol.vx*t,
-    y:gun.y+sol.vy*t-.5*gravity*t*t,
-    z:gun.z+sol.vz*t
-  };
+  return{x:gun.x+sol.vx*t,y:gun.y+sol.vy*t-.5*gravity*t*t,z:gun.z+sol.vz*t};
 }
 
 function drawCircleOnPlane(x,z,r,color,theta,dashed){
@@ -425,90 +411,105 @@ function drawCircleOnPlane(x,z,r,color,theta,dashed){
 function drawGun(theta){
   var p=proj(gun.x,1.2,gun.z,theta);
   ctx.fillStyle=pal.ink;
-  ctx.beginPath();
-  ctx.arc(p.x,p.y,8,0,Math.PI*2);
-  ctx.fill();
+  ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.fill();
 }
 
 function shipWorldSize(ship){
-  if(ship.code==="CV")return{len:15,w:5.6,label:"CARRIER"};
-  if(ship.code==="CA")return{len:12,w:4.8,label:"CRUISER"};
-  return{len:9,w:3.8,label:"DESTROYER"};
+  if(ship.code==="CV")return{len:19,w:7.2,label:"CARRIER"};
+  if(ship.code==="CA")return{len:15,w:5.8,label:"CRUISER"};
+  return{len:11,w:4.4,label:"DESTROYER"};
 }
 function shipHullPoints(ship,sz){
   var h=ship.heading||0;
   var ch=Math.cos(h),sh=Math.sin(h);
-  var raw=[
-    [-sz.len/2,0],[-sz.len*.32,-sz.w/2],[sz.len*.28,-sz.w/2],
-    [sz.len/2,0],[sz.len*.28,sz.w/2],[-sz.len*.32,sz.w/2]
-  ];
-  return raw.map(function(q){
-    return[
-      ship.x+q[0]*ch-q[1]*sh,
-      .75,
-      ship.z+q[0]*sh+q[1]*ch
-    ];
-  });
+  var raw=[[-sz.len/2,0],[-sz.len*.34,-sz.w/2],[sz.len*.30,-sz.w/2],[sz.len/2,0],[sz.len*.30,sz.w/2],[-sz.len*.34,sz.w/2]];
+  return raw.map(function(q){return[ship.x+q[0]*ch-q[1]*sh,.75,ship.z+q[0]*sh+q[1]*ch];});
+}
+function localPoint(ship,forward,side,y){
+  var h=ship.heading||0,ch=Math.cos(h),sh=Math.sin(h);
+  return[ship.x+forward*ch-side*sh,y,ship.z+forward*sh+side*ch];
 }
 function drawWake(ship,theta,state){
   if(state==="sunk")return;
   var h=ship.heading||0,sz=shipWorldSize(ship);
-  var bx=ship.x-Math.cos(h)*sz.len*.55;
-  var bz=ship.z-Math.sin(h)*sz.len*.55;
-  ctx.save();
-  ctx.strokeStyle=pal.ink;
-  ctx.globalAlpha=.16;
-  ctx.lineWidth=1.5;
-  ctx.setLineDash([4,5]);
+  var bx=ship.x-Math.cos(h)*sz.len*.57;
+  var bz=ship.z-Math.sin(h)*sz.len*.57;
   [-1,1].forEach(function(side){
     var offset=side*sz.w*.28;
     var ox=-Math.sin(h)*offset,oz=Math.cos(h)*offset;
-    line([bx+ox,.13,bz+oz],[bx-Math.cos(h)*8+ox,.13,bz-Math.sin(h)*8+oz],pal.ink,1.5,theta,[4,5]);
+    line([bx+ox,.13,bz+oz],[bx-Math.cos(h)*11+ox,.13,bz-Math.sin(h)*11+oz],pal.ink,1.6,theta,[4,5]);
   });
-  ctx.restore();
 }
 function drawContactZone(ship,theta){
   var p=proj(ship.x,.3,ship.z,theta);
   ctx.save();
-  ctx.globalAlpha=.56;
-  ctx.strokeStyle=pal.ink;
-  ctx.lineWidth=2;
-  ctx.setLineDash([6,6]);
-  ctx.beginPath();
-  ctx.ellipse(p.x,p.y,34,15,0,0,Math.PI*2);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.globalAlpha=.11;
-  ctx.fillStyle=pal.ink;
-  ctx.beginPath();
-  ctx.ellipse(p.x,p.y,31,12,0,0,Math.PI*2);
-  ctx.fill();
-  ctx.globalAlpha=.72;
-  ctx.font="800 10px "+getComputedStyle(document.body).getPropertyValue("--ui");
-  ctx.textAlign="center";
-  ctx.fillText("UNKNOWN CONTACT",p.x,p.y-20);
-  ctx.font="800 18px "+getComputedStyle(document.body).getPropertyValue("--display");
-  ctx.fillText("?",p.x,p.y+6);
+  ctx.strokeStyle=pal.ink;ctx.lineWidth=2.4;ctx.globalAlpha=.65;ctx.setLineDash([7,6]);
+  ctx.beginPath();ctx.ellipse(p.x,p.y,43,19,0,0,Math.PI*2);ctx.stroke();
+  ctx.setLineDash([]);ctx.globalAlpha=.12;ctx.fillStyle=pal.ink;
+  ctx.beginPath();ctx.ellipse(p.x,p.y,39,15,0,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=.36;ctx.beginPath();ctx.arc(p.x,p.y,31,Math.PI*.15,Math.PI*.85);ctx.stroke();
+  ctx.beginPath();ctx.arc(p.x,p.y,25,Math.PI*1.15,Math.PI*1.85);ctx.stroke();
+  ctx.globalAlpha=.82;ctx.font="800 10px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";
+  ctx.fillText("UNKNOWN CONTACT",p.x,p.y-25);
+  ctx.font="800 22px "+getComputedStyle(document.body).getPropertyValue("--display");ctx.fillText("?",p.x,p.y+7);
   ctx.restore();
 }
 function drawShipImpactHistory(ship,theta,state){
   if(state==="intact")return;
   var p=proj(ship.x,.4,ship.z,theta);
-  ctx.save();
-  ctx.strokeStyle=state==="damaged"?"#c16e37":pal.red;
-  ctx.globalAlpha=state==="sunk" ? .85 : .62;
-  ctx.lineWidth=2;
-  for(var i=0;i<(state==="damaged"?2:4);i++){
-    var ang=(i*1.8)+(ship.x+ship.z)*.07;
-    var r=17+i*5;
-    ctx.beginPath();
-    ctx.arc(p.x+Math.cos(ang)*r,p.y+Math.sin(ang)*r*.45,3+i*.4,0,Math.PI*2);
-    ctx.stroke();
+  ctx.save();ctx.strokeStyle=state==="damaged"?"#c16e37":pal.red;ctx.globalAlpha=state==="sunk" ? .9 : .7;ctx.lineWidth=2.3;
+  for(var i=0;i<(state==="damaged"?3:5);i++){
+    var ang=(i*1.8)+(ship.x+ship.z)*.07;var r=20+i*5;
+    ctx.beginPath();ctx.arc(p.x+Math.cos(ang)*r,p.y+Math.sin(ang)*r*.45,3+i*.5,0,Math.PI*2);ctx.stroke();
   }
   if(state==="critical"||state==="sunk"){
-    ctx.setLineDash([5,5]);
-    ctx.beginPath();ctx.arc(p.x,p.y,state==="sunk"?31:27,0,Math.PI*2);ctx.stroke();
+    ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(p.x,p.y,state==="sunk"?38:32,0,Math.PI*2);ctx.stroke();
   }
+  ctx.restore();
+}
+function drawShipClassDetails(ship,theta,state){
+  if(state==="sunk")return;
+  var detail=state==="critical"?pal.red:pal.board;
+  if(ship.code==="CV"){
+    line(localPoint(ship,-6,0,1.35),localPoint(ship,7,0,1.35),detail,2,theta);
+    line(localPoint(ship,-4,-2.2,1.36),localPoint(ship,4,-2.2,1.36),detail,1.4,theta);
+    var island=proj.apply(null,localPoint(ship,-1,2.0,1.7).concat([theta]));
+    ctx.save();ctx.fillStyle=detail;ctx.beginPath();ctx.arc(island.x,island.y,4,0,Math.PI*2);ctx.fill();ctx.restore();
+  }else if(ship.code==="CA"){
+    [-4,0,4].forEach(function(f){
+      var t=proj.apply(null,localPoint(ship,f,0,1.55).concat([theta]));
+      ctx.save();ctx.fillStyle=detail;ctx.beginPath();ctx.arc(t.x,t.y,4.2,0,Math.PI*2);ctx.fill();ctx.restore();
+    });
+  }else{
+    [-2.7,2.6].forEach(function(f){
+      var t=proj.apply(null,localPoint(ship,f,0,1.5).concat([theta]));
+      ctx.save();ctx.fillStyle=detail;ctx.beginPath();ctx.arc(t.x,t.y,3.5,0,Math.PI*2);ctx.fill();ctx.restore();
+    });
+  }
+}
+function drawBoardHealth(ship,theta,state,isEnemy){
+  if(isEnemy&&!ship.revealed&&state==="intact")return;
+  var p=proj(ship.x,.8,ship.z,theta);
+  var width=ship.code==="CV"?62:(ship.code==="CA"?52:44);
+  var ratio=Math.max(0,ship.hp/ship.max);
+  ctx.save();
+  ctx.fillStyle="rgba(0,0,0,.18)";ctx.fillRect(p.x-width/2,p.y+24,width,5);
+  ctx.fillStyle=state==="critical"||state==="sunk"?pal.red:(state==="damaged"?"#c98238":pal.ink);
+  ctx.fillRect(p.x-width/2,p.y+24,width*ratio,5);
+  ctx.strokeStyle=pal.ink;ctx.globalAlpha=.55;ctx.strokeRect(p.x-width/2,p.y+24,width,5);
+  ctx.font="800 9px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";ctx.globalAlpha=.8;ctx.fillStyle=pal.ink;
+  ctx.fillText(ship.hp+" / "+ship.max,p.x,p.y+40);
+  ctx.restore();
+}
+function drawTargetBrackets(ship,theta){
+  if(!ship||ship.hp<=0)return;
+  var p=proj(ship.x,.8,ship.z,theta),r=36;
+  ctx.save();ctx.strokeStyle=pal.red;ctx.lineWidth=2.5;ctx.globalAlpha=.82;
+  [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(function(s){
+    var x=p.x+s[0]*r,y=p.y+s[1]*22;
+    ctx.beginPath();ctx.moveTo(x,y+s[1]*10);ctx.lineTo(x,y);ctx.lineTo(x+s[0]*10,y);ctx.stroke();
+  });
+  ctx.font="800 9px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";ctx.fillStyle=pal.red;ctx.fillText("ACTIVE TARGET",p.x,p.y-32);
   ctx.restore();
 }
 function drawWorldShip(ship,theta,isEnemy){
@@ -516,93 +517,57 @@ function drawWorldShip(ship,theta,isEnemy){
   var state=shipState(ship);
   var hidden=isEnemy&&!ship.revealed&&state==="intact";
   if(ship.justHit){
-    ctx.save();
-    ctx.fillStyle=pal.red;
-    ctx.globalAlpha=.18+.12*Math.sin(performance.now()/70);
-    ctx.beginPath();ctx.arc(p.x,p.y,38,0,Math.PI*2);ctx.fill();
-    ctx.restore();
+    ctx.save();ctx.fillStyle=pal.red;ctx.globalAlpha=.22+.14*Math.sin(performance.now()/70);ctx.beginPath();ctx.arc(p.x,p.y,46,0,Math.PI*2);ctx.fill();ctx.restore();
   }
-  if(hidden){
-    drawContactZone(ship,theta);
-    return;
-  }
+  if(hidden){drawContactZone(ship,theta);return;}
 
   var sz=shipWorldSize(ship);
   drawWake(ship,theta,state);
 
-  // Ground shadow anchors the hull into the board.
   var shadow=proj(ship.x,.15,ship.z,theta);
-  ctx.save();
-  ctx.fillStyle=pal.shadow;
-  ctx.globalAlpha=state==="sunk" ? .16 : .28;
-  ctx.beginPath();
-  ctx.ellipse(shadow.x+5,shadow.y+6,sz.len*2.25,Math.max(5,sz.w*1.3),0,0,Math.PI*2);
-  ctx.fill();
-  ctx.restore();
+  ctx.save();ctx.fillStyle=pal.shadow;ctx.globalAlpha=state==="sunk" ? .18 : .34;ctx.beginPath();ctx.ellipse(shadow.x+6,shadow.y+7,sz.len*2.65,Math.max(7,sz.w*1.55),0,0,Math.PI*2);ctx.fill();ctx.restore();
 
   var fill=state==="sunk"?"rgba(90,95,90,.34)":(state==="critical"?pal.red:(state==="damaged"?"#b66c32":pal.ink));
-  ctx.save();
-  ctx.globalAlpha=state==="sunk" ? .55 : .96;
-  poly(shipHullPoints(ship,sz),fill,pal.ink,theta);
-  ctx.restore();
+  ctx.save();ctx.globalAlpha=state==="sunk" ? .55 : .98;poly(shipHullPoints(ship,sz),fill,pal.ink,theta);ctx.restore();
 
-  // Superstructure gives each silhouette a little more mass/class identity.
   var h=ship.heading||0;
-  var superLen=ship.code==="CV"?6:(ship.code==="CA"?4.6:3.4);
-  var superW=ship.code==="CV"?2.2:(ship.code==="CA"?2:1.6);
-  var centerOffset=ship.code==="CV"?-1.8:0;
+  var superLen=ship.code==="CV"?8:(ship.code==="CA"?5.8:4.2);
+  var superW=ship.code==="CV"?2.8:(ship.code==="CA"?2.5:2.0);
+  var centerOffset=ship.code==="CV"?-2.5:0;
   var cx=ship.x+Math.cos(h)*centerOffset,cz=ship.z+Math.sin(h)*centerOffset;
   var ch=Math.cos(h),sh=Math.sin(h);
   poly([
-    [cx-superLen/2*ch+superW/2*sh,1.2,cz-superLen/2*sh-superW/2*ch],
-    [cx+superLen/2*ch+superW/2*sh,1.2,cz+superLen/2*sh-superW/2*ch],
-    [cx+superLen/2*ch-superW/2*sh,1.2,cz+superLen/2*sh+superW/2*ch],
-    [cx-superLen/2*ch-superW/2*sh,1.2,cz-superLen/2*sh+superW/2*ch]
+    [cx-superLen/2*ch+superW/2*sh,1.25,cz-superLen/2*sh-superW/2*ch],
+    [cx+superLen/2*ch+superW/2*sh,1.25,cz+superLen/2*sh-superW/2*ch],
+    [cx+superLen/2*ch-superW/2*sh,1.25,cz+superLen/2*sh+superW/2*ch],
+    [cx-superLen/2*ch-superW/2*sh,1.25,cz-superLen/2*sh+superW/2*ch]
   ],fill,pal.ink,theta);
 
+  drawShipClassDetails(ship,theta,state);
   drawShipImpactHistory(ship,theta,state);
 
   if(state==="damaged"||state==="critical"||state==="sunk"){
-    ctx.save();
-    ctx.strokeStyle=state==="sunk"?pal.red:"#e17a3f";
-    ctx.lineWidth=state==="critical"?5:3;
-    ctx.beginPath();
-    ctx.moveTo(p.x-12,p.y-11);ctx.lineTo(p.x+11,p.y+10);
-    if(state==="critical"||state==="sunk"){ctx.moveTo(p.x+10,p.y-10);ctx.lineTo(p.x-9,p.y+9);}
-    ctx.stroke();
-    ctx.restore();
+    ctx.save();ctx.strokeStyle=state==="sunk"?pal.red:"#e17a3f";ctx.lineWidth=state==="critical"?5:3.5;
+    ctx.beginPath();ctx.moveTo(p.x-15,p.y-13);ctx.lineTo(p.x+14,p.y+12);
+    if(state==="critical"||state==="sunk"){ctx.moveTo(p.x+13,p.y-12);ctx.lineTo(p.x-12,p.y+11);}ctx.stroke();ctx.restore();
   }
   if(state==="critical"){
-    ctx.save();
-    ctx.fillStyle=pal.red;
-    ctx.globalAlpha=.18+.16*Math.sin(performance.now()/180);
-    ctx.beginPath();ctx.arc(p.x,p.y,30,0,Math.PI*2);ctx.fill();
-    ctx.globalAlpha=.72;
-    ctx.fillStyle=pal.ink;
-    ctx.beginPath();
-    ctx.arc(p.x+6,p.y-19,5,0,Math.PI*2);
-    ctx.arc(p.x+10,p.y-27,4,0,Math.PI*2);
-    ctx.arc(p.x+6,p.y-34,3,0,Math.PI*2);
-    ctx.fill();
-    ctx.restore();
+    ctx.save();ctx.fillStyle=pal.red;ctx.globalAlpha=.18+.16*Math.sin(performance.now()/180);ctx.beginPath();ctx.arc(p.x,p.y,36,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=.72;ctx.fillStyle=pal.ink;ctx.beginPath();ctx.arc(p.x+7,p.y-22,6,0,Math.PI*2);ctx.arc(p.x+12,p.y-31,4.5,0,Math.PI*2);ctx.arc(p.x+8,p.y-39,3.2,0,Math.PI*2);ctx.fill();ctx.restore();
   }
   if(state==="sunk"){
-    ctx.save();
-    ctx.strokeStyle=pal.red;ctx.lineWidth=4;ctx.globalAlpha=.78;
-    ctx.beginPath();ctx.moveTo(p.x-22,p.y-16);ctx.lineTo(p.x+22,p.y+16);ctx.stroke();
-    ctx.restore();
+    ctx.save();ctx.strokeStyle=pal.red;ctx.lineWidth=5;ctx.globalAlpha=.82;ctx.beginPath();ctx.moveTo(p.x-28,p.y-20);ctx.lineTo(p.x+28,p.y+20);ctx.stroke();ctx.restore();
   }
 
-  ctx.save();
-  ctx.fillStyle=state==="sunk"?pal.red:pal.ink;
-  ctx.font="800 12px "+getComputedStyle(document.body).getPropertyValue("--ui");
-  ctx.textAlign="center";
-  ctx.fillText(ship.code+" · "+sz.label,p.x,p.y-18);
-  ctx.restore();
+  ctx.save();ctx.fillStyle=state==="sunk"?pal.red:pal.ink;ctx.font="800 13px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";
+  ctx.fillText(ship.code+" · "+sz.label,p.x,p.y-24);ctx.restore();
+  drawBoardHealth(ship,theta,state,isEnemy);
 }
 function drawBattlefieldFleets(theta){
+  var active=activeEnemyShip(currentFront);
   profiles[currentFront].fleet.forEach(function(ship){drawWorldShip(ship,theta,true);});
   westFleet.forEach(function(ship){drawWorldShip(ship,theta,false);});
+  if(active&&active.revealed)drawTargetBrackets(active,theta);
 }
 function drawTarget(theta){
   if(!target)return;
@@ -612,512 +577,225 @@ function drawTarget(theta){
 }
 function drawCompass(theta){
   var cx=70,cy=cssH-64;
-  ctx.save();
-  ctx.translate(cx,cy);
-  ctx.strokeStyle=pal.ink;ctx.fillStyle=pal.ink;ctx.globalAlpha=.82;ctx.lineWidth=1.5;
+  ctx.save();ctx.translate(cx,cy);ctx.strokeStyle=pal.ink;ctx.fillStyle=pal.ink;ctx.globalAlpha=.82;ctx.lineWidth=1.5;
   ctx.beginPath();ctx.arc(0,0,23,0,Math.PI*2);ctx.stroke();
-  var labels=[
-    {t:"N",a:-Math.PI/2},{t:"E",a:0},{t:"S",a:Math.PI/2},{t:"W",a:Math.PI}
-  ];
-  ctx.font="800 11px "+getComputedStyle(document.body).getPropertyValue("--ui");
-  ctx.textAlign="center";ctx.textBaseline="middle";
-  labels.forEach(function(o){
-    ctx.globalAlpha=(o.t===currentFront.charAt(0).toUpperCase())?1:.42;
-    ctx.fillText(o.t,Math.cos(o.a)*32,Math.sin(o.a)*32);
-  });
-  ctx.globalAlpha=.9;
-  ctx.beginPath();ctx.moveTo(0,-17);ctx.lineTo(-5,-5);ctx.lineTo(5,-5);ctx.closePath();ctx.fill();
-  ctx.font="800 9px "+getComputedStyle(document.body).getPropertyValue("--ui");
-  ctx.fillText(currentFront.toUpperCase()+" THEATER",0,44);
-  ctx.restore();
+  var labels=[{t:"N",a:-Math.PI/2},{t:"E",a:0},{t:"S",a:Math.PI/2},{t:"W",a:Math.PI}];
+  ctx.font="800 11px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";ctx.textBaseline="middle";
+  labels.forEach(function(o){ctx.globalAlpha=(o.t===currentFront.charAt(0).toUpperCase())?1:.42;ctx.fillText(o.t,Math.cos(o.a)*32,Math.sin(o.a)*32);});
+  ctx.globalAlpha=.9;ctx.beginPath();ctx.moveTo(0,-17);ctx.lineTo(-5,-5);ctx.lineTo(5,-5);ctx.closePath();ctx.fill();
+  ctx.font="800 9px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.fillText(currentFront.toUpperCase()+" THEATER",0,44);ctx.restore();
 }
 
 function drawHomeMarks(theta){
   homeMarks.forEach(function(h){
     var p=proj(h.x,.35,h.z,theta);
-    ctx.save();
-    ctx.strokeStyle=h.hit?pal.red:pal.ink;
-    ctx.globalAlpha=h.hit?.78:.46;
-    ctx.lineWidth=h.hit?3:2;
-    ctx.beginPath();
-    if(h.hit){
-      ctx.moveTo(p.x-10,p.y-10);ctx.lineTo(p.x+10,p.y+10);
-      ctx.moveTo(p.x+10,p.y-10);ctx.lineTo(p.x-10,p.y+10);
-    }else{
-      ctx.arc(p.x,p.y,7,0,Math.PI*2);
-    }
-    ctx.stroke();
-    ctx.restore();
+    ctx.save();ctx.strokeStyle=h.hit?pal.red:pal.ink;ctx.globalAlpha=h.hit ? .78 : .46;ctx.lineWidth=h.hit?3:2;ctx.beginPath();
+    if(h.hit){ctx.moveTo(p.x-10,p.y-10);ctx.lineTo(p.x+10,p.y+10);ctx.moveTo(p.x+10,p.y-10);ctx.lineTo(p.x-10,p.y+10);}else{ctx.arc(p.x,p.y,7,0,Math.PI*2);}
+    ctx.stroke();ctx.restore();
   });
 }
 
 function drawHistory(theta){
   history.forEach(function(h){
     var p=proj(h.x,.3,h.z,theta);
-    ctx.save();
-    ctx.strokeStyle=h.kind==="hit"?pal.red:pal.ink;
-    ctx.globalAlpha=.65;
-    ctx.lineWidth=2.5;
-    ctx.beginPath();
-    if(h.kind==="hit"){
-      ctx.moveTo(p.x-9,p.y-9);ctx.lineTo(p.x+9,p.y+9);
-      ctx.moveTo(p.x+9,p.y-9);ctx.lineTo(p.x-9,p.y+9);
-    }else{
-      ctx.arc(p.x,p.y,7,0,Math.PI*2);
-    }
-    ctx.stroke();
-    ctx.restore();
+    ctx.save();ctx.strokeStyle=h.kind==="hit"?pal.red:pal.ink;ctx.globalAlpha=.65;ctx.lineWidth=2.5;ctx.beginPath();
+    if(h.kind==="hit"){ctx.moveTo(p.x-9,p.y-9);ctx.lineTo(p.x+9,p.y+9);ctx.moveTo(p.x+9,p.y-9);ctx.lineTo(p.x-9,p.y+9);}else{ctx.arc(p.x,p.y,7,0,Math.PI*2);}
+    ctx.stroke();ctx.restore();
   });
 }
 
 function drawPreview(sol,theta){
   var endT=sol.collision?sol.collision.t:sol.totalT;
-  ctx.save();
-  ctx.strokeStyle=sol.collision?pal.red:pal.ink;
-  ctx.globalAlpha=.36;
-  ctx.lineWidth=2;
-  ctx.setLineDash([7,7]);
-  ctx.beginPath();
+  ctx.save();ctx.strokeStyle=sol.collision?pal.red:pal.ink;ctx.globalAlpha=.36;ctx.lineWidth=2;ctx.setLineDash([7,7]);ctx.beginPath();
   for(var i=0;i<=90;i++){
-    var t=endT*i/90;
-    var q=trajectoryPoint(sol,t);
-    var p=proj(q.x,q.y,q.z,theta);
+    var t=endT*i/90;var q=trajectoryPoint(sol,t);var p=proj(q.x,q.y,q.z,theta);
     if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
   }
-  ctx.stroke();
-  ctx.restore();
-
-  var retX=Math.max(0,Math.min(100,sol.landX));
-  var retZ=Math.max(0,Math.min(100,sol.landZ));
+  ctx.stroke();ctx.restore();
+  var retX=Math.max(0,Math.min(100,sol.landX));var retZ=Math.max(0,Math.min(100,sol.landZ));
   line([gun.x,.12,gun.z],[retX,.12,retZ],pal.ink,1.25,theta,[5,7]);
   drawCircleOnPlane(retX,retZ,4.5,sol.collision?pal.red:pal.ink,theta,true);
 }
 
 function incomingPoint(s,t){
   var omt=1-t;
-  return{
-    x:omt*omt*s.start.x+2*omt*t*s.control.x+t*t*s.end.x,
-    y:omt*omt*s.start.y+2*omt*t*s.control.y+t*t*s.end.y,
-    z:omt*omt*s.start.z+2*omt*t*s.control.z+t*t*s.end.z
-  };
+  return{x:omt*omt*s.start.x+2*omt*t*s.control.x+t*t*s.end.x,y:omt*omt*s.start.y+2*omt*t*s.control.y+t*t*s.end.y,z:omt*omt*s.start.z+2*omt*t*s.control.z+t*t*s.end.z};
 }
 function drawIncomingShot(now,theta){
   if(!incomingShot)return;
-  var q=Math.min(1,(now-incomingShot.startTime)/incomingShot.duration);
-  var p3=incomingPoint(incomingShot,q);
-  var p=proj(p3.x,p3.y,p3.z,theta);
-
-  ctx.save();
-  ctx.strokeStyle=pal.red;
-  ctx.globalAlpha=.58;
-  ctx.lineWidth=3;
-  ctx.beginPath();
-  var begin=Math.max(0,q-.22);
+  var q=Math.min(1,(now-incomingShot.startTime)/incomingShot.duration);var p3=incomingPoint(incomingShot,q);var p=proj(p3.x,p3.y,p3.z,theta);
+  ctx.save();ctx.strokeStyle=pal.red;ctx.globalAlpha=.58;ctx.lineWidth=3;ctx.beginPath();var begin=Math.max(0,q-.22);
   for(var i=0;i<=22;i++){
-    var qi=begin+(q-begin)*i/22;
-    var wp=incomingPoint(incomingShot,qi);
-    var sp=proj(wp.x,wp.y,wp.z,theta);
+    var qi=begin+(q-begin)*i/22;var wp=incomingPoint(incomingShot,qi);var sp=proj(wp.x,wp.y,wp.z,theta);
     if(i===0)ctx.moveTo(sp.x,sp.y);else ctx.lineTo(sp.x,sp.y);
   }
-  ctx.stroke();
-  ctx.restore();
-
-  ctx.fillStyle=pal.red;
-  ctx.beginPath();
-  ctx.arc(p.x,p.y,5.5,0,Math.PI*2);
-  ctx.fill();
-
-  if(q>=1&&!incomingShot.done){
-    incomingShot.done=true;
-    resolveIncoming(incomingShot);
-  }
+  ctx.stroke();ctx.restore();ctx.fillStyle=pal.red;ctx.beginPath();ctx.arc(p.x,p.y,5.5,0,Math.PI*2);ctx.fill();
+  if(q>=1&&!incomingShot.done){incomingShot.done=true;resolveIncoming(incomingShot);}
 }
 
 function drawShot(now,theta){
   if(!shot)return;
-  var q=Math.min(1,(now-shot.start)/shot.duration);
-  var t=shot.endT*q;
-
-  ctx.save();
-  ctx.strokeStyle=pal.red;
-  ctx.globalAlpha=.62;
-  ctx.lineWidth=3;
-  ctx.beginPath();
-  var startQ=Math.max(0,q-.18);
+  var q=Math.min(1,(now-shot.start)/shot.duration);var t=shot.endT*q;
+  ctx.save();ctx.strokeStyle=pal.red;ctx.globalAlpha=.62;ctx.lineWidth=3;ctx.beginPath();var startQ=Math.max(0,q-.18);
   for(var i=0;i<=24;i++){
-    var qi=startQ+(q-startQ)*i/24;
-    var wp=trajectoryPoint(shot.sol,shot.endT*qi);
-    var sp=proj(wp.x,wp.y,wp.z,theta);
+    var qi=startQ+(q-startQ)*i/24;var wp=trajectoryPoint(shot.sol,shot.endT*qi);var sp=proj(wp.x,wp.y,wp.z,theta);
     if(i===0)ctx.moveTo(sp.x,sp.y);else ctx.lineTo(sp.x,sp.y);
   }
-  ctx.stroke();
-  ctx.restore();
-
-  var w=trajectoryPoint(shot.sol,t);
-  var p=proj(w.x,w.y,w.z,theta);
-  ctx.fillStyle=pal.red;
-  ctx.beginPath();
-  ctx.arc(p.x,p.y,5.5,0,Math.PI*2);
-  ctx.fill();
-
-  if(q>=1&&!shot.done){
-    shot.done=true;
-    resolveShot(shot.sol);
-  }
+  ctx.stroke();ctx.restore();var w=trajectoryPoint(shot.sol,t);var p=proj(w.x,w.y,w.z,theta);ctx.fillStyle=pal.red;ctx.beginPath();ctx.arc(p.x,p.y,5.5,0,Math.PI*2);ctx.fill();
+  if(q>=1&&!shot.done){shot.done=true;resolveShot(shot.sol);}
 }
 
 function flash(text){
-  callout.textContent=text;
-  callout.classList.remove("show");
-  void callout.offsetWidth;
-  callout.classList.add("show");
+  callout.textContent=text;callout.classList.remove("show");void callout.offsetWidth;callout.classList.add("show");
 }
 
 function resolveShot(sol){
-  var x;
-  var kind;
-
-  var z;
+  var x;var kind;var z;
   if(sol.collision){
-    x=sol.collision.x;
-    z=sol.collision.z;
-    kind="ridge";
-    status.textContent="RIDGE STRIKE — raise the arc or change power.";
-    flash("RIDGE STRIKE");
+    x=sol.collision.x;z=sol.collision.z;kind="ridge";status.textContent="RIDGE STRIKE — raise the arc or change power.";flash("RIDGE STRIKE");
   }else{
-    x=sol.landX;
-    z=sol.landZ;
-    var missDistance=target?Math.hypot(x-target.x,z-target.z):999;
+    x=sol.landX;z=sol.landZ;var missDistance=target?Math.hypot(x-target.x,z-target.z):999;
     if(target&&missDistance<=target.r){
-      kind="hit";
-      var damageResult=damageEnemyShip(currentFront);
+      kind="hit";var damageResult=damageEnemyShip(currentFront);
       if(damageResult&&damageResult.ship){
-        var struckShip=damageResult.ship;
-        var stateAfter=shipState(struckShip).toUpperCase();
+        var struckShip=damageResult.ship;var stateAfter=shipState(struckShip).toUpperCase();
         status.textContent="DIRECT HIT — "+(damageResult.wasHidden?"CONTACT REVEALED · ":"")+struckShip.name+" "+stateAfter+".";
-      }else{
-        status.textContent="DIRECT HIT — enemy fleet damaged.";
-      }
+      }else{status.textContent="DIRECT HIT — enemy fleet damaged.";}
       flash(damageResult&&damageResult.wasHidden?"CONTACT!":"DIRECT HIT");
     }else{
-      kind="miss";
-      status.textContent=x>100?"LONG — shot left the chart.":"SPLASH — correct from the mark.";
-      flash(x>100?"LONG":"SPLASH");
+      kind="miss";status.textContent=x>100?"LONG — shot left the chart.":"SPLASH — correct from the mark.";flash(x>100?"LONG":"SPLASH");
     }
   }
 
-  history.push({
-    x:Math.max(0,Math.min(100,x)),
-    z:Math.max(0,Math.min(100,z)),
-    kind:kind==="hit"?"hit":"miss",
-    angle:sol.deg,power:sol.power,bearing:sol.bearing
-  });
+  history.push({x:Math.max(0,Math.min(100,x)),z:Math.max(0,Math.min(100,z)),kind:kind==="hit"?"hit":"miss",angle:sol.deg,power:sol.power,bearing:sol.bearing});
   if(kind==="hit")profiles[currentFront].hits++;
-  lastAttackedFront=currentFront;
-  updateFrontIntel();
-  renderFleets();
-  if(history.length>9)history.shift();
-
-  previousVal.textContent=formatBearing(sol.bearing)+" · "+sol.deg+"° / "+sol.power+"%";
-  shot=null;
-  updateReadout();
-  setTimeout(beginReturnVolley,520);
+  lastAttackedFront=currentFront;updateFrontIntel();renderFleets();if(history.length>9)history.shift();
+  previousVal.textContent=formatBearing(sol.bearing)+" · "+sol.deg+"° / "+sol.power+"%";shot=null;updateReadout();setTimeout(beginReturnVolley,520);
 }
 
 function fireShot(){
   if(shot||returningFire)return;
-  var sol=solution();
-  shot={
-    sol:sol,
-    start:performance.now(),
-    duration:1450,
-    endT:sol.collision?sol.collision.t:sol.totalT,
-    done:false
-  };
-  fire.disabled=true;
-  status.textContent="SHOT AWAY — watch the ridge clearance.";
-  flash("SHOT AWAY");
+  var sol=solution();shot={sol:sol,start:performance.now(),duration:1450,endT:sol.collision?sol.collision.t:sol.totalT,done:false};
+  fire.disabled=true;status.textContent="SHOT AWAY — watch the ridge clearance.";flash("SHOT AWAY");
 }
 
 function fleetStrength(front){
-  var fleet=profiles[front].fleet;
-  var alive=fleet.filter(function(ship){return ship.hp>0;});
-  if(!alive.length)return 0;
-  var hp=alive.reduce(function(sum,ship){return sum+ship.hp;},0);
-  var max=alive.reduce(function(sum,ship){return sum+ship.max;},0);
-  return hp/max;
+  var fleet=profiles[front].fleet;var alive=fleet.filter(function(ship){return ship.hp>0;});if(!alive.length)return 0;
+  var hp=alive.reduce(function(sum,ship){return sum+ship.hp;},0);var max=alive.reduce(function(sum,ship){return sum+ship.max;},0);return hp/max;
 }
-function frontEliminated(front){
-  return profiles[front].fleet.every(function(ship){return ship.hp<=0;});
-}
+function frontEliminated(front){return profiles[front].fleet.every(function(ship){return ship.hp<=0;});}
 function damageEnemyShip(front){
-  var fleet=profiles[front].fleet;
-  var ship=fleet.find(function(s){return s.hp>0;});
-  if(!ship)return null;
-  var wasHidden=!ship.revealed;
-  ship.revealed=true;
-  ship.hp=Math.max(0,ship.hp-1);
-  ship.justHit=true;
-  if(front===currentFront)target=activeTarget(front);
-  setTimeout(function(){ship.justHit=false;renderFleets();},900);
-  return{ship:ship,wasHidden:wasHidden};
+  var fleet=profiles[front].fleet;var ship=fleet.find(function(s){return s.hp>0;});if(!ship)return null;
+  var wasHidden=!ship.revealed;ship.revealed=true;ship.hp=Math.max(0,ship.hp-1);ship.justHit=true;if(front===currentFront)target=activeTarget(front);
+  setTimeout(function(){ship.justHit=false;renderFleets();},900);return{ship:ship,wasHidden:wasHidden};
 }
 function damageWestShip(){
-  var alive=westFleet.filter(function(ship){return ship.hp>0;});
-  if(!alive.length)return null;
-  var ship=alive[Math.floor(Math.random()*alive.length)];
-  ship.hp=Math.max(0,ship.hp-1);
-  ship.justHit=true;
-  setTimeout(function(){ship.justHit=false;renderFleets();},900);
-  return ship;
+  var alive=westFleet.filter(function(ship){return ship.hp>0;});if(!alive.length)return null;
+  var ship=alive[Math.floor(Math.random()*alive.length)];ship.hp=Math.max(0,ship.hp-1);ship.justHit=true;setTimeout(function(){ship.justHit=false;renderFleets();},900);return ship;
 }
 function incomingSpec(front,index){
-  var specs={
-    north:{peak:46,duration:1120,z:38,label:"NORTH"},
-    east:{peak:31,duration:930,z:50,label:"EAST"},
-    south:{peak:18,duration:760,z:63,label:"SOUTH"}
-  };
-  var s=specs[front];
-  var strength=fleetStrength(front);
-  var baseHit=front===lastAttackedFront ? .14 : .10;
-  var hit=Math.random()<(baseHit*(.55+.45*strength));
-  var endZ=50+(Math.random()*14-7);
-  var endX=hit?gun.x+2+(Math.random()*4):gun.x+10+(Math.random()*12);
-  return{
-    front:front,label:s.label,hit:hit,
-    start:{x:96,y:2,z:s.z},
-    control:{x:54,y:s.peak,z:(s.z+endZ)/2},
-    end:{x:endX,y:.4,z:endZ},
-    startTime:0,duration:s.duration,done:false,index:index
-  };
+  var specs={north:{peak:46,duration:1120,z:38,label:"NORTH"},east:{peak:31,duration:930,z:50,label:"EAST"},south:{peak:18,duration:760,z:63,label:"SOUTH"}};
+  var s=specs[front];var strength=fleetStrength(front);var baseHit=front===lastAttackedFront ? .14 : .10;var hit=Math.random()<(baseHit*(.55+.45*strength));
+  var endZ=50+(Math.random()*14-7);var endX=hit?gun.x+2+(Math.random()*4):gun.x+10+(Math.random()*12);
+  return{front:front,label:s.label,hit:hit,start:{x:96,y:2,z:s.z},control:{x:54,y:s.peak,z:(s.z+endZ)/2},end:{x:endX,y:.4,z:endZ},startTime:0,duration:s.duration,done:false,index:index};
 }
 function beginReturnVolley(){
-  returningFire=true;
-  fire.disabled=true;
-  var order=[];
-  ["north","east","south"].forEach(function(front){
-    if(frontEliminated(front))return;
-    if(front===lastAttackedFront||Math.random()<.35)order.push(front);
-  });
+  returningFire=true;fire.disabled=true;var order=[];
+  ["north","east","south"].forEach(function(front){if(frontEliminated(front))return;if(front===lastAttackedFront||Math.random()<.35)order.push(front);});
   if(!order.length&&!frontEliminated(lastAttackedFront))order.push(lastAttackedFront);
   status.textContent=order.length>1?"INCOMING VOLLEY — multiple fronts responding.":"INCOMING FIRE — "+(order[0]||"enemy")+" front responding.";
-  flash("INCOMING!");
-  orbitLabel.textContent="Camera: tracking return fire";
-  runIncomingFront(order,0);
+  flash("INCOMING!");orbitLabel.textContent="Camera: tracking return fire";runIncomingFront(order,0);
 }
 function runIncomingFront(order,index){
   if(index>=order.length){
-    incomingShot=null;
-    returningFire=false;
-    volley++;
-    volleyLabel.textContent="Volley "+volley;
-    orbitLabel.textContent="Camera: slow orbit";
-    updateFrontIntel();
+    incomingShot=null;returningFire=false;volley++;volleyLabel.textContent="Volley "+volley;orbitLabel.textContent="Camera: slow orbit";updateFrontIntel();
     var aliveWest=westFleet.filter(function(ship){return ship.hp>0;}).length;
-    status.textContent=aliveWest<3?"RETURN FIRE RESOLVED — West fleet status updated.":"RETURN FIRE RESOLVED — West is still holding.";
-    fire.disabled=false;
-    return;
+    status.textContent=aliveWest<3?"RETURN FIRE RESOLVED — West fleet status updated.":"RETURN FIRE RESOLVED — West is still holding.";fire.disabled=false;return;
   }
-  incomingShot=incomingSpec(order[index],index);
-  incomingShot.order=order;
-  incomingShot.startTime=performance.now();
-  status.textContent=order[index].toUpperCase()+" FRONT — incoming round.";
-  setTimeout(function(){
-    if(incomingShot&&incomingShot.front===order[index]&&!incomingShot.done){
-      // render loop resolves it
-    }
-  },50);
+  incomingShot=incomingSpec(order[index],index);incomingShot.order=order;incomingShot.startTime=performance.now();status.textContent=order[index].toUpperCase()+" FRONT — incoming round.";
 }
 function resolveIncoming(s){
-  homeMarks.push({x:s.end.x,z:s.end.z,hit:s.hit,front:s.front});
-  if(homeMarks.length>12)homeMarks.shift();
-  if(s.hit){
-    var struck=damageWestShip();
-    homeDamage++;
-    flash(s.label+" HIT");
-    status.textContent=s.label+" FRONT hit West"+(struck?" · "+struck.name+" damaged.":".");
-    renderFleets();
-  }else{
-    flash("SPLASH");
-    status.textContent=s.label+" FRONT missed West.";
-  }
-  updateFrontIntel();
-  var order=s.order||[];
-  var next=s.index+1;
-  incomingShot=null;
-  setTimeout(function(){runIncomingFront(order,next);},260);
+  homeMarks.push({x:s.end.x,z:s.end.z,hit:s.hit,front:s.front});if(homeMarks.length>12)homeMarks.shift();
+  if(s.hit){var struck=damageWestShip();homeDamage++;flash(s.label+" HIT");status.textContent=s.label+" FRONT hit West"+(struck?" · "+struck.name+" damaged.":".");renderFleets();}
+  else{flash("SPLASH");status.textContent=s.label+" FRONT missed West.";}
+  updateFrontIntel();var order=s.order||[];var next=s.index+1;incomingShot=null;setTimeout(function(){runIncomingFront(order,next);},260);
 }
 
 function formatBearing(rad){
-  var deg=Math.round(rad*180/Math.PI);
-  if(Math.abs(deg)<1)return "0° CENTER";
-  return Math.abs(deg)+"° "+(deg<0?"N":"S");
+  var deg=Math.round(rad*180/Math.PI);if(Math.abs(deg)<1)return "0° CENTER";return Math.abs(deg)+"° "+(deg<0?"N":"S");
 }
 function updateReadout(){
-  var sol=solution();
-  angleVal.textContent=sol.deg+"°";
-  powerVal.textContent=sol.power+"%";
-  bearingVal.textContent=formatBearing(sol.bearing);
-  rangeVal.textContent=Math.round(Math.hypot(sol.landX-gun.x,sol.landZ-gun.z))+" units";
-  pathVal.textContent=sol.collision?"BLOCKED":"CLEAR";
-  pathVal.style.color=sol.collision?"var(--red)":"var(--ink)";
-
-  var minClear=999;
-  var samples=160;
-  for(var i=1;i<=samples;i++){
-    var t=sol.totalT*i/samples;
-    var q=trajectoryPoint(sol,t);
-    var terrainH=ridgeHeightAt(q.x,q.z);
-    if(terrainH>0)minClear=Math.min(minClear,q.y-terrainH);
-  }
+  var sol=solution();angleVal.textContent=sol.deg+"°";powerVal.textContent=sol.power+"%";bearingVal.textContent=formatBearing(sol.bearing);
+  rangeVal.textContent=Math.round(Math.hypot(sol.landX-gun.x,sol.landZ-gun.z))+" units";pathVal.textContent=sol.collision?"BLOCKED":"CLEAR";pathVal.style.color=sol.collision?"var(--red)":"var(--ink)";
+  var minClear=999;var samples=160;
+  for(var i=1;i<=samples;i++){var t=sol.totalT*i/samples;var q=trajectoryPoint(sol,t);var terrainH=ridgeHeightAt(q.x,q.z);if(terrainH>0)minClear=Math.min(minClear,q.y-terrainH);}
   clearanceVal.textContent=minClear===999?"OPEN":Math.round(minClear)+" units";
 }
 
 function aimChanged(){
-  aimingUntil=performance.now()+1200;
-  orbitLabel.textContent="Camera: orbit damped while aiming";
-  clearTimeout(aimChanged.timer);
-  aimChanged.timer=setTimeout(function(){
-    orbitLabel.textContent="Camera: slow orbit";
-  },1250);
-  updateReadout();
+  aimingUntil=performance.now()+1200;orbitLabel.textContent="Camera: orbit damped while aiming";clearTimeout(aimChanged.timer);
+  aimChanged.timer=setTimeout(function(){orbitLabel.textContent="Camera: slow orbit";},1250);updateReadout();
 }
 
 function frame(now){
-  var orbitScale=now<aimingUntil ? .18 : 1;
-  var facing=theaterOrientation[currentFront]||0;
-  var theta=facing+(-.12+Math.sin(now/18000)*.12*orbitScale);
-  cameraTheta=theta;
-
-  drawBoard(theta);
-  drawRidge(theta);
-  drawHistory(theta);
-  drawHomeMarks(theta);
-  drawBattlefieldFleets(theta);
-  drawGun(theta);
-  drawTarget(theta);
-  drawCompass(theta);
-  if(!returningFire)drawPreview(solution(),theta);
-  drawShot(now,theta);
-  drawIncomingShot(now,theta);
-
-  requestAnimationFrame(frame);
+  var orbitScale=now<aimingUntil ? .18 : 1;var facing=theaterOrientation[currentFront]||0;var theta=facing+(-.12+Math.sin(now/18000)*.12*orbitScale);cameraTheta=theta;
+  drawBoard(theta);drawRidge(theta);drawHistory(theta);drawHomeMarks(theta);drawBattlefieldFleets(theta);drawGun(theta);drawTarget(theta);drawCompass(theta);
+  if(!returningFire)drawPreview(solution(),theta);drawShot(now,theta);drawIncomingShot(now,theta);requestAnimationFrame(frame);
 }
 
 function shipState(ship){
-  if(ship.hp<=0)return "sunk";
-  var ratio=ship.hp/ship.max;
-  if(ratio<=.34)return "critical";
-  if(ratio<1)return "damaged";
-  return "intact";
+  if(ship.hp<=0)return "sunk";var ratio=ship.hp/ship.max;if(ratio<=.34)return "critical";if(ratio<1)return "damaged";return "intact";
 }
 function shipMarkup(ship,isEnemy){
-  var state=shipState(ship);
-  var hidden=isEnemy&&!ship.revealed&&state==="intact";
-  var label=hidden?"?":ship.code;
-  var pips="";
+  var state=shipState(ship);var hidden=isEnemy&&!ship.revealed&&state==="intact";var label=hidden?"?":ship.code;var pips="";
   for(var i=0;i<ship.max;i++)pips+='<i class="'+(i<ship.hp?"live":"lost")+'"></i>';
   var classes="shipAvatar "+state+(hidden?" contact":" revealed")+(ship.justHit?" justHit":"");
   var fx=state==="critical"?'<span class="smoke">••</span>':(state==="sunk"?'<span class="wreck">×</span>':(state==="damaged"?'<span class="scar">／</span>':""));
   return '<span class="'+classes+'" title="'+(hidden?"Unknown contact":ship.name+" · "+state)+'"><b>'+label+'</b><span class="hull">'+fx+'</span><span class="pips">'+pips+'</span><span class="stateText">'+(hidden?"CONTACT":state.toUpperCase())+'</span></span>';
 }
 function renderFleets(){
-  ["north","east","south"].forEach(function(front){
-    var host=document.getElementById(front+"Fleet");
-    host.innerHTML=profiles[front].fleet.map(function(ship){return shipMarkup(ship,true);}).join("");
-  });
+  ["north","east","south"].forEach(function(front){var host=document.getElementById(front+"Fleet");host.innerHTML=profiles[front].fleet.map(function(ship){return shipMarkup(ship,true);}).join("");});
   document.getElementById("westFleet").innerHTML=westFleet.map(function(ship){return shipMarkup(ship,false);}).join("");
 }
 function updateFrontIntel(){
   ["north","east","south"].forEach(function(front){
-    var el=document.getElementById(front+"Intel");
-    var fleet=profiles[front].fleet;
-    var sunk=fleet.filter(function(ship){return ship.hp<=0;}).length;
-    if(sunk===fleet.length)el.textContent="Front eliminated";
-    else if(sunk)el.textContent=sunk+" ship"+(sunk===1?"":"s")+" sunk";
-    else{
-      var hits=profiles[front].hits;
-      el.textContent=hits?(hits+" confirmed hit"+(hits===1?"":"s")):"No hits";
-    }
+    var el=document.getElementById(front+"Intel");var fleet=profiles[front].fleet;var sunk=fleet.filter(function(ship){return ship.hp<=0;}).length;
+    if(sunk===fleet.length)el.textContent="Front eliminated";else if(sunk)el.textContent=sunk+" ship"+(sunk===1?"":"s")+" sunk";
+    else{var hits=profiles[front].hits;el.textContent=hits?(hits+" confirmed hit"+(hits===1?"":"s")):"No hits";}
   });
   var westAlive=westFleet.filter(function(ship){return ship.hp>0;}).length;
   document.getElementById("westIntel").textContent=westAlive?((3-westAlive)?(3-westAlive)+" ship"+((3-westAlive)===1?"":"s")+" lost":"Fleet ready"):"Fleet destroyed";
 }
 function switchFront(front){
   if(!profiles[front]||shot||returningFire)return;
-  currentFront=front;
-  bearing=0;
-  target=activeTarget(front);
-  history=profiles[front].history;
-  document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){
-    btn.classList.toggle("active",btn.getAttribute("data-front")===front);
-  });
+  currentFront=front;bearing=0;target=activeTarget(front);history=profiles[front].history;
+  document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){btn.classList.toggle("active",btn.getAttribute("data-front")===front);});
   document.querySelector(".hud > div:first-child").childNodes[0].nodeValue=profiles[front].title;
-  terrainLabel.textContent=profiles[front].label;
-  terrainNote.textContent=profiles[front].note;
+  terrainLabel.textContent=profiles[front].label;terrainNote.textContent=profiles[front].note;
   previousVal.textContent=history.length?(formatBearing(history[history.length-1].bearing||0)+" · "+history[history.length-1].angle+"° / "+history[history.length-1].power+"%"):"—";
-  status.textContent="Targeting "+profiles[front].title+". Read the terrain and plot your shot.";
-  updateReadout();
+  status.textContent="Targeting "+profiles[front].title+". Read the terrain and plot your shot.";updateReadout();
 }
-document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){
-  btn.addEventListener("click",function(){switchFront(this.getAttribute("data-front"));});
-});
+document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){btn.addEventListener("click",function(){switchFront(this.getAttribute("data-front"));});});
 
 function canvasToWorld(clientX,clientY){
-  var rect=canvas.getBoundingClientRect();
-  var sx=clientX-rect.left;
-  var sy=clientY-rect.top;
-  var rx=(sx-cssW/2)/(cssW/145);
-  var rz=(sy-cssH*.57)/(cssH/380);
-  var ct=Math.cos(cameraTheta);
-  var st=Math.sin(cameraTheta);
-  var dx=rx*ct+rz*st;
-  var dz=-rx*st+rz*ct;
-  return{x:dx+50,z:dz+50};
+  var rect=canvas.getBoundingClientRect();var sx=clientX-rect.left;var sy=clientY-rect.top;var rx=(sx-cssW/2)/(cssW/145);var rz=(sy-cssH*.57)/(cssH/380);
+  var ct=Math.cos(cameraTheta);var st=Math.sin(cameraTheta);var dx=rx*ct+rz*st;var dz=-rx*st+rz*ct;return{x:dx+50,z:dz+50};
 }
 function setBearingFromPointer(clientX,clientY){
   if(shot||returningFire)return;
-  var w=canvasToWorld(clientX,clientY);
-  var raw=Math.atan2(w.z-gun.z,w.x-gun.x);
-  var limit=30*Math.PI/180;
-  bearing=Math.max(-limit,Math.min(limit,raw));
-  aimingUntil=performance.now()+1200;
-  orbitLabel.textContent="Camera: bearing lock";
-  updateReadout();
+  var w=canvasToWorld(clientX,clientY);var raw=Math.atan2(w.z-gun.z,w.x-gun.x);var limit=30*Math.PI/180;bearing=Math.max(-limit,Math.min(limit,raw));
+  aimingUntil=performance.now()+1200;orbitLabel.textContent="Camera: bearing lock";updateReadout();
 }
-canvas.addEventListener("pointerdown",function(e){
-  if(shot||returningFire)return;
-  draggingBearing=true;
-  canvas.setPointerCapture(e.pointerId);
-  setBearingFromPointer(e.clientX,e.clientY);
-});
-canvas.addEventListener("pointermove",function(e){
-  if(!draggingBearing)return;
-  setBearingFromPointer(e.clientX,e.clientY);
-});
-canvas.addEventListener("pointerup",function(e){
-  draggingBearing=false;
-  try{canvas.releasePointerCapture(e.pointerId);}catch(err){}
-  setTimeout(function(){
-    if(!shot&&!returningFire)orbitLabel.textContent="Camera: slow orbit";
-  },450);
-});
+canvas.addEventListener("pointerdown",function(e){if(shot||returningFire)return;draggingBearing=true;canvas.setPointerCapture(e.pointerId);setBearingFromPointer(e.clientX,e.clientY);});
+canvas.addEventListener("pointermove",function(e){if(!draggingBearing)return;setBearingFromPointer(e.clientX,e.clientY);});
+canvas.addEventListener("pointerup",function(e){draggingBearing=false;try{canvas.releasePointerCapture(e.pointerId);}catch(err){}setTimeout(function(){if(!shot&&!returningFire)orbitLabel.textContent="Camera: slow orbit";},450);});
 canvas.addEventListener("pointercancel",function(){draggingBearing=false;});
 
-angle.addEventListener("input",aimChanged);
-power.addEventListener("input",aimChanged);
-fire.addEventListener("click",fireShot);
+angle.addEventListener("input",aimChanged);power.addEventListener("input",aimChanged);fire.addEventListener("click",fireShot);
 
-theme.addEventListener("change",function(){
-  document.body.classList.remove("blueprint","warroom");
-  if(this.value!=="notebook")document.body.classList.add(this.value);
-  pal=palettes[this.value];
-});
+theme.addEventListener("change",function(){document.body.classList.remove("blueprint","warroom");if(this.value!=="notebook")document.body.classList.add(this.value);pal=palettes[this.value];});
 
-renderFleets();
-updateFrontIntel();
-updateReadout();
-requestAnimationFrame(frame);
+renderFleets();updateFrontIntel();updateReadout();requestAnimationFrame(frame);
 })();
 </script>
 </body>
