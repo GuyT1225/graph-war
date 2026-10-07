@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.10 — Combat Audio</title>
+<title>Graph War V0.10.11 — Balance, Mobile & How to Play</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -167,13 +167,74 @@ body.warroom .stage .commandCompass .sectorPlaque.active{background:#d3c69d;}
 .volumeLabel{margin:8px 0 2px;font-size:10px;letter-spacing:.08em}
 #audioVolume{height:22px}
 body.blueprint .audioControls{background:rgba(8,25,38,.24)}
-body.warroom .audioControls{background:rgba(255,248,220,.18)}</style></head>
+body.warroom .audioControls{background:rgba(255,248,220,.18)}</style><style>
+
+.howTo{margin-top:14px;border:1px solid var(--line);border-radius:7px;background:rgba(255,255,255,.18);overflow:hidden}
+.howTo summary{cursor:pointer;padding:11px 12px;color:var(--ink);font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;user-select:none}
+.howToBody{padding:0 12px 11px;color:var(--muted);font-size:12px;line-height:1.45}
+.howToBody p{margin:7px 0}.howToBody strong{color:var(--ink)}.howToBody .tip{color:var(--ink2);font-weight:700}
+body.blueprint .howTo{background:rgba(8,25,38,.24)}
+body.warroom .howTo{background:rgba(255,248,220,.18)}
+
+@media(max-width:900px){
+  main{padding:8px}
+  h1{font-size:34px}
+  .top{gap:10px;margin-bottom:8px;padding:9px}
+  .sub{font-size:13px;line-height:1.4}
+  .theme{width:100%;justify-content:space-between}
+  .theme select{min-height:44px}
+  .layout{grid-template-columns:1fr;gap:10px}
+  .stage{min-height:520px;border-radius:7px}
+  #scene{height:520px}
+  .panel{border-radius:7px}
+  .panelHead{padding:14px 16px 12px}
+  .panelBody{padding:14px 16px 18px}
+  .control{margin:14px 0}
+  input[type=range]{height:38px}
+  .fire{min-height:60px;font-size:22px}
+  .readout{gap:6px}
+  .readout .metric{padding:9px 10px}
+  .status{margin-top:10px}
+  .hud{inset:10px 10px auto 10px;font-size:15px}
+  .hud span{font-size:10px}
+  .stage>.frontbar.commandCompass{right:6px;bottom:6px;width:172px;height:150px;grid-template-columns:1fr 54px 1fr;grid-template-rows:1fr 54px 1fr}
+  .stage .commandCompass .compassBubble{width:52px;height:52px}
+  .stage .commandCompass .compassRing{transform:scale(.72)}
+  .stage .commandCompass .sectorPlaque{padding:2px}
+  .stage .commandCompass .sectorPlaque strong{font-size:10px}
+  .stage .commandCompass .sectorPlaque .dir{font-size:7px}
+  .stage .commandCompass .sectorPlaque em{font-size:7px}
+}
+@media(max-width:560px){
+  h1{font-size:30px}
+  .version{display:block;width:max-content;margin:7px 0 0}
+  .stage{min-height:460px}
+  #scene{height:460px}
+  .callout{font-size:34px;top:18%}
+  .readout{grid-template-columns:1fr 1fr}
+  .audioControls{padding:9px}
+  .audioToggle{min-height:42px}
+  .stage>.frontbar.commandCompass{width:154px;height:136px;grid-template-columns:1fr 48px 1fr;grid-template-rows:1fr 48px 1fr;opacity:.88}
+  .stage .commandCompass .compassBubble{width:46px;height:46px}
+  .stage .commandCompass .compassRing{transform:scale(.62)}
+}
+@media(max-width:390px){
+  main{padding:4px}
+  .stage{min-height:420px}
+  #scene{height:420px}
+  .panelBody{padding:12px}
+  .readout{font-size:12px}
+  .stage>.frontbar.commandCompass{width:142px;height:126px}
+}
+
+</style>
+</head>
 <body>
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.10 COMBAT AUDIO</span></h1>
-      <div class="sub">Warships now read as battlefield actors, not tokens: larger class-specific silhouettes, active-target brackets, hull details, board health bars, stronger contacts, and persistent damage history.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.11 PLAYABILITY PASS</span></h1>
+      <div class="sub">Mobile-ready tactical play with clearer instructions and fairer return fire: same battlefield, less punishment, easier first-time pickup.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -241,6 +302,18 @@ body.warroom .audioControls{background:rgba(255,248,220,.18)}</style></head>
         <label class="volumeLabel" for="audioVolume"><span>Volume</span><span id="audioVolumeVal">55%</span></label>
         <input id="audioVolume" type="range" min="0" max="100" value="55" aria-label="Combat audio volume">
       </div>
+
+      <details class="howTo">
+        <summary>How to play</summary>
+        <div class="howToBody">
+          <p><strong>1.</strong> Pick North, East, or South from the command ring.</p>
+          <p><strong>2.</strong> Drag across the board to set bearing.</p>
+          <p><strong>3.</strong> Adjust angle and power to clear terrain.</p>
+          <p><strong>4.</strong> Fire. X marks hits; circles mark misses or blocked shots.</p>
+          <p><strong>5.</strong> Sink enemy ships before return fire destroys the West fleet.</p>
+          <p class="tip">Tip: damaged enemy fleets return fire less accurately.</p>
+        </div>
+      </details>
 
       <div class="readout">
         <div class="metric"><span>Bearing</span><strong id="bearingVal">0°</strong></div><div class="metric"><span>Landing</span><strong id="rangeVal">—</strong></div>
@@ -874,20 +947,35 @@ function damageEnemyShip(front){
   var wasHidden=!ship.revealed;ship.revealed=true;ship.hp=Math.max(0,ship.hp-1);ship.justHit=true;if(front===currentFront)target=activeTarget(front);
   setTimeout(function(){ship.justHit=false;renderFleets();},900);return{ship:ship,wasHidden:wasHidden};
 }
-function damageWestShip(){
+function damageWestShip(preferred){
   var alive=westFleet.filter(function(ship){return ship.hp>0;});if(!alive.length)return null;
-  var ship=alive[Math.floor(Math.random()*alive.length)];ship.hp=Math.max(0,ship.hp-1);ship.justHit=true;setTimeout(function(){ship.justHit=false;renderFleets();},900);return ship;
+  var ship=(preferred&&preferred.hp>0)?preferred:alive[Math.floor(Math.random()*alive.length)];
+  ship.hp=Math.max(0,ship.hp-1);ship.justHit=true;setTimeout(function(){ship.justHit=false;renderFleets();},900);return ship;
 }
 function incomingSpec(front,index){
   var specs={north:{peak:46,duration:1120,z:38,label:"NORTH"},east:{peak:31,duration:930,z:50,label:"EAST"},south:{peak:18,duration:760,z:63,label:"SOUTH"}};
-  var s=specs[front];var strength=fleetStrength(front);var baseHit=front===lastAttackedFront ? .14 : .10;var hit=Math.random()<(baseHit*(.55+.45*strength));
-  var endZ=50+(Math.random()*14-7);var endX=hit?gun.x+2+(Math.random()*4):gun.x+10+(Math.random()*12);
-  return{front:front,label:s.label,hit:hit,start:{x:96,y:2,z:s.z},control:{x:54,y:s.peak,z:(s.z+endZ)/2},end:{x:endX,y:.4,z:endZ},startTime:0,duration:s.duration,done:false,index:index};
+  var s=specs[front],strength=fleetStrength(front);
+  var aliveWest=westFleet.filter(function(ship){return ship.hp>0;});
+  var targetShip=aliveWest.length?aliveWest[Math.floor(Math.random()*aliveWest.length)]:null;
+  var baseHit=front===lastAttackedFront ? .09 : .055;
+  var latePressure=Math.min(.025,Math.max(0,volley-6)*.003);
+  var hit=Math.random()<((baseHit+latePressure)*(.48+.52*strength));
+  var aimX=targetShip?targetShip.x:gun.x+4,aimZ=targetShip?targetShip.z:gun.z;
+  var endX=hit?aimX+(Math.random()*2-1):aimX+7+(Math.random()*10);
+  var endZ=hit?aimZ+(Math.random()*3-1.5):aimZ+(Math.random()*18-9);
+  return{front:front,label:s.label,hit:hit,targetShip:targetShip,start:{x:96,y:2,z:s.z},control:{x:54,y:s.peak,z:(s.z+endZ)/2},end:{x:endX,y:.4,z:endZ},startTime:0,duration:s.duration,done:false,index:index};
 }
 function beginReturnVolley(){
   returningFire=true;fire.disabled=true;var order=[];
-  ["north","east","south"].forEach(function(front){if(frontEliminated(front))return;if(front===lastAttackedFront||Math.random()<.35)order.push(front);});
-  if(!order.length&&!frontEliminated(lastAttackedFront))order.push(lastAttackedFront);
+  if(!frontEliminated(lastAttackedFront))order.push(lastAttackedFront);
+  if(Math.random()<.12){
+    var extras=["north","east","south"].filter(function(front){return front!==lastAttackedFront&&!frontEliminated(front);});
+    if(extras.length)order.push(extras[Math.floor(Math.random()*extras.length)]);
+  }
+  if(!order.length){
+    var survivors=["north","east","south"].filter(function(front){return !frontEliminated(front);});
+    if(survivors.length)order.push(survivors[Math.floor(Math.random()*survivors.length)]);
+  }
   status.textContent=order.length>1?"INCOMING VOLLEY — multiple fronts responding.":"INCOMING FIRE — "+(order[0]||"enemy")+" front responding.";
   flash("INCOMING!");sfxIncomingCue();orbitLabel.textContent="Camera: tracking return fire";runIncomingFront(order,0);
 }
@@ -901,7 +989,7 @@ function runIncomingFront(order,index){
 }
 function resolveIncoming(s){
   homeMarks.push({x:s.end.x,z:s.end.z,hit:s.hit,front:s.front});if(homeMarks.length>12)homeMarks.shift();
-  if(s.hit){var struck=damageWestShip();homeDamage++;flash(s.label+" HIT");sfxHit();status.textContent=s.label+" FRONT hit West"+(struck?" · "+struck.name+" damaged.":".");renderFleets();}
+  if(s.hit){var struck=damageWestShip(s.targetShip);homeDamage++;flash(s.label+" HIT");sfxHit();status.textContent=s.label+" FRONT hit West"+(struck?" · "+struck.name+" damaged.":".");renderFleets();}
   else{flash("SPLASH");sfxSplash();status.textContent=s.label+" FRONT missed West.";}
   updateFrontIntel();var order=s.order||[];var next=s.index+1;incomingShot=null;setTimeout(function(){runIncomingFront(order,next);},260);
 }
@@ -988,7 +1076,7 @@ audioVolume.addEventListener("change",function(){unlockAudio();if(!audioMuted)to
 
 theme.addEventListener("change",function(){document.body.classList.remove("blueprint","warroom");if(this.value!=="notebook")document.body.classList.add(this.value);pal=palettes[this.value];});
 
-renderFleets();updateFrontIntel();updateReadout();requestAnimationFrame(frame);
+renderFleets();updateFrontIntel();updateReadout();updateAudioUi();requestAnimationFrame(frame);
 })();
 </script>
 </body>
