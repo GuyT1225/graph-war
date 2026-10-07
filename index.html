@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.8 — Command Compass</title>
+<title>Graph War V0.10.9 — Integrated Command Ring & Camera Orbit</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -190,13 +190,114 @@ body.warroom .commandCompass .sectorPlaque.active{background:#ddd3ad;}
 }
 
 </style>
+<style>
+
+/* V0.10.9 — Compact command plotting instrument built into the war table */
+.stage{isolation:isolate}
+.stage>.frontbar.commandCompass{
+  position:absolute;z-index:4;right:13px;top:66px;left:auto;
+  width:278px;height:188px;max-width:calc(100% - 26px);margin:0;
+  display:grid;grid-template-columns:93px 82px 93px;
+  grid-template-rows:53px 82px 53px;
+  grid-template-areas:". north ." "west hub east" ". south .";
+  gap:0;justify-content:center;align-content:center;
+  background:rgba(237,245,246,.69);
+  border:1px solid rgba(49,112,158,.27);
+  border-radius:4px;
+  box-shadow:0 3px 11px rgba(16,42,63,.08);
+  backdrop-filter:blur(4px);
+}
+.stage>.commandCompass:before{
+  inset:10px 46px;border:1px dashed var(--line);
+  opacity:.27;border-radius:50%;
+}
+.stage>.commandCompass .sectorPlaque{
+  min-width:0;width:100%;min-height:0;height:100%;
+  padding:5px 7px 4px;text-align:center;
+  background:transparent;color:var(--ink);
+  box-shadow:none;filter:none;
+  border:0;
+  clip-path:none;
+}
+.stage>.commandCompass .sectorPlaque:after{display:none}
+.stage>.commandCompass .sectorPlaque.north,
+.stage>.commandCompass .sectorPlaque.south{
+  min-width:0;width:100%;justify-self:stretch;clip-path:none;
+}
+.stage>.commandCompass .sectorPlaque.west,
+.stage>.commandCompass .sectorPlaque.east{
+  clip-path:none;padding:5px 4px;
+}
+.stage>.commandCompass .sectorPlaque:hover{
+  transform:none;background:rgba(49,112,158,.11);
+}
+.stage>.commandCompass .sectorPlaque.active{
+  background:rgba(163,56,49,.13);
+  border:1px solid var(--red);
+  box-shadow:inset 0 0 0 1px rgba(163,56,49,.12);
+}
+.stage>.commandCompass .sectorPlaque.home{border:0;background:transparent}
+.stage>.commandCompass .sectorPlaque .dir{
+  font-size:10px;letter-spacing:.08em;margin:0;
+}
+.stage>.commandCompass .sectorPlaque strong{
+  font-size:13px;line-height:1.08;margin:2px 0 0;
+  white-space:nowrap;
+}
+.stage>.commandCompass .sectorPlaque small,
+.stage>.commandCompass .sectorPlaque .fleetStrip{display:none}
+.stage>.commandCompass .sectorPlaque em{
+  margin:2px 0 0;font-size:8px;line-height:1.15;
+  padding:0;background:transparent;display:block;
+}
+.stage>.commandCompass .compassBubble{
+  width:79px;min-height:79px;height:79px;
+  border:1px solid var(--ink2);
+  box-shadow:inset 0 0 0 3px rgba(49,112,158,.08);
+  background:rgba(255,255,255,.24);
+  align-self:center;justify-self:center;
+}
+.stage>.commandCompass .compassRing{
+  transform:scale(.57);flex:none;margin:-21px;
+}
+.stage>.commandCompass .commandCaption{display:none}
+body.blueprint .stage>.frontbar.commandCompass{
+  background:rgba(11,37,56,.77);border-color:rgba(125,219,255,.22);
+}
+body.warroom .stage>.frontbar.commandCompass{
+  background:rgba(238,230,201,.79);border-color:rgba(42,72,43,.27);
+}
+body.blueprint .stage>.commandCompass .sectorPlaque,
+body.warroom .stage>.commandCompass .sectorPlaque{background:transparent}
+body.blueprint .stage>.commandCompass .sectorPlaque.active,
+body.warroom .stage>.commandCompass .sectorPlaque.active{
+  background:rgba(163,56,49,.15);
+}
+@media(max-width:650px){
+  .stage>.frontbar.commandCompass{
+    top:64px;right:9px;width:222px;height:155px;
+    grid-template-columns:75px 72px 75px;
+    grid-template-rows:42px 70px 42px;
+  }
+  .stage>.commandCompass .compassBubble{width:66px;height:66px;min-height:66px}
+  .stage>.commandCompass .compassRing{transform:scale(.48)}
+  .stage>.commandCompass .sectorPlaque{padding:3px 2px}
+  .stage>.commandCompass .sectorPlaque strong{font-size:11px}
+  .stage>.commandCompass .sectorPlaque .dir{font-size:9px}
+  .stage>.commandCompass .sectorPlaque em{font-size:7px}
+}
+@media(max-width:390px){
+  .stage>.frontbar.commandCompass{top:75px;right:6px;width:205px;grid-template-columns:69px 67px 69px}
+}
+
+</style>
 </head>
 <body>
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.8 COMMAND COMPASS</span></h1>
-      <div class="sub">Warships now read as battlefield actors, not tokens: larger class-specific silhouettes, active-target brackets, hull details, board health bars, stronger contacts, and persistent damage history.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.9 INTEGRATED COMMAND RING</span></h1>
+      <div class="sub">A compact tactical command ring now lives within the war table, while a restored slow camera orbit keeps the battlefield alive.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -208,28 +309,27 @@ body.warroom .commandCompass .sectorPlaque.active{background:#ddd3ad;}
     </div>
   </div>
 
-  <section class="frontbar commandCompass" aria-label="Four-front tactical compass">
-    <button class="frontCard sectorPlaque north" data-front="north" aria-label="Select North Ice Shelf theater">
-      <span class="dir">▲ NORTH</span><strong>Ice Shelf</strong><small>high cliffs · narrow clearance</small><div class="fleetStrip" id="northFleet"></div><em id="northIntel">No hits</em>
-    </button>
-    <button class="frontCard sectorPlaque east active" data-front="east" aria-label="Select East Ridge Pass theater">
-      <span class="dir">EAST ▶</span><strong>Ridge Pass</strong><small>broken islands · staggered ridge</small><div class="fleetStrip" id="eastFleet"></div><em id="eastIntel">No hits</em>
-    </button>
-    <button class="frontCard sectorPlaque south" data-front="south" aria-label="Select South Dune Line theater">
-      <span class="dir">▼ SOUTH</span><strong>Dune Line</strong><small>low berms · long arcs</small><div class="fleetStrip" id="southFleet"></div><em id="southIntel">No hits</em>
-    </button>
-    <div class="frontCard sectorPlaque west home" aria-label="West home fleet status">
-      <span class="dir">◀ WEST</span><strong>Your Front</strong><small>home battery · holding</small><div class="fleetStrip" id="westFleet"></div><em id="westIntel">Fleet ready</em>
-    </div>
-    <div class="globeMark compassBubble" aria-label="Central command compass" role="img">
-      <div class="compassRing"><span class="compassN">N</span><span class="compassE">E</span><span class="compassS">S</span><span class="compassW">W</span><div class="compassNeedle"></div><div class="compassPin"></div></div>
-      <span class="commandCaption">GLOBAL COMMAND</span>
-    </div>
-  </section>
-
   <div class="layout">
     <section class="stage" id="stage">
       <canvas id="scene" aria-label="2.5D tactical firing board. Drag across the board to set bearing."></canvas>
+      <section class="frontbar commandCompass" aria-label="Four-front tactical compass">
+          <button class="frontCard sectorPlaque north" data-front="north" aria-label="Select North Ice Shelf theater">
+            <span class="dir">▲ NORTH</span><strong>Ice Shelf</strong><small>high cliffs · narrow clearance</small><div class="fleetStrip" id="northFleet"></div><em id="northIntel">No hits</em>
+          </button>
+          <button class="frontCard sectorPlaque east active" data-front="east" aria-label="Select East Ridge Pass theater">
+            <span class="dir">EAST ▶</span><strong>Ridge Pass</strong><small>broken islands · staggered ridge</small><div class="fleetStrip" id="eastFleet"></div><em id="eastIntel">No hits</em>
+          </button>
+          <button class="frontCard sectorPlaque south" data-front="south" aria-label="Select South Dune Line theater">
+            <span class="dir">▼ SOUTH</span><strong>Dune Line</strong><small>low berms · long arcs</small><div class="fleetStrip" id="southFleet"></div><em id="southIntel">No hits</em>
+          </button>
+          <div class="frontCard sectorPlaque west home" aria-label="West home fleet status">
+            <span class="dir">◀ WEST</span><strong>Your Front</strong><small>home battery · holding</small><div class="fleetStrip" id="westFleet"></div><em id="westIntel">Fleet ready</em>
+          </div>
+          <div class="globeMark compassBubble" aria-label="Central command compass" role="img">
+            <div class="compassRing"><span class="compassN">N</span><span class="compassE">E</span><span class="compassS">S</span><span class="compassW">W</span><div class="compassNeedle"></div><div class="compassPin"></div></div>
+            <span class="commandCaption">GLOBAL COMMAND</span>
+          </div>
+        </section>
       <div class="hud">
         <div>East Theater · Ridge Pass<br><span id="orbitLabel">Camera: slow orbit</span></div>
         <div style="text-align:right">West Battery<br><span id="volleyLabel">Volley 1</span></div>
@@ -885,8 +985,13 @@ function aimChanged(){
   aimChanged.timer=setTimeout(function(){orbitLabel.textContent="Camera: slow orbit";},1250);updateReadout();
 }
 
+var orbitDamping=1;
 function frame(now){
-  var orbitScale=now<aimingUntil ? .18 : 1;var facing=theaterOrientation[currentFront]||0;var theta=facing+(-.12+Math.sin(now/18000)*.12*orbitScale);cameraTheta=theta;
+  var orbitTarget=(now<aimingUntil||draggingBearing) ? .12 : 1;
+  orbitDamping+=(orbitTarget-orbitDamping)*.045;
+  var facing=theaterOrientation[currentFront]||0;
+  var theta=facing-.12+Math.sin(now/6000)*.25*orbitDamping;
+  cameraTheta=theta;
   drawBoard(theta);drawRidge(theta);drawHistory(theta);drawHomeMarks(theta);drawBattlefieldFleets(theta);drawGun(theta);drawTarget(theta);drawCompass(theta);
   if(!returningFire)drawPreview(solution(),theta);drawShot(now,theta);drawIncomingShot(now,theta);requestAnimationFrame(frame);
 }
