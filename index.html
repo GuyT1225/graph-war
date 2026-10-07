@@ -56,7 +56,7 @@ body.blueprint .stateChip{background:#123f5c;color:#9de5ff;border-color:#4b7991}
 <style>
 
 /* V0.10.8: directional command compass instead of the old horizontal cards */
-.commandCompass{
+.frontbar.commandCompass{
   --hub:140px;
   display:grid;
   grid-template-columns:minmax(0,1fr) var(--hub) minmax(0,1fr);
@@ -164,7 +164,7 @@ body.blueprint .commandCompass .sectorPlaque.active{background:#215472;}
 body.warroom .commandCompass .sectorPlaque{background:#ece4c8;}
 body.warroom .commandCompass .sectorPlaque.active{background:#ddd3ad;}
 @media(max-width:750px){
-  .commandCompass{
+  .frontbar.commandCompass{
     --hub:110px;grid-template-columns:minmax(0,1fr) var(--hub) minmax(0,1fr);
     grid-template-rows:auto 120px auto;column-gap:4px;row-gap:4px;
   }
@@ -181,7 +181,7 @@ body.warroom .commandCompass .sectorPlaque.active{background:#ddd3ad;}
   .commandCompass .sectorPlaque .shipAvatar .stateText{font-size:5px;}
 }
 @media(max-width:420px){
-  .commandCompass{grid-template-columns:minmax(0,1fr) 94px minmax(0,1fr);}
+  .frontbar.commandCompass{grid-template-columns:minmax(0,1fr) 94px minmax(0,1fr);}
   .commandCompass .compassBubble{width:94px;min-height:94px;}
   .commandCompass .sectorPlaque .fleetStrip{gap:2px;}
   .commandCompass .sectorPlaque .shipAvatar{min-width:29px;}
