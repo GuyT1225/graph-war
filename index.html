@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.19 — Direct Aim & Battlefield Feedback</title>
+<title>Graph War V0.10.20 — Terminal War Room & Field Guide</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -42,8 +42,8 @@ input[type=range]{width:100%;height:30px}
 .note{margin-top:16px;color:var(--muted);font-size:13px;line-height:1.55}
 .legend{margin-top:16px;padding-top:13px;border-top:1px solid var(--line);color:var(--ink2);font-size:12px;line-height:1.55}
 body.blueprint{--page:#06131f;--panel:#0f2e47;--paper:#0b2538;--ink:#c4efff;--ink2:#6ed3ff;--red:#ff746e;--muted:#a7c7d5;--line:#356984;--button:#153d5a;--chip:#123b55;--display:"Rajdhani","Arial Narrow",sans-serif;--ui:"IBM Plex Sans",system-ui,sans-serif;color:#eaf8ff}
-body.warroom{--page:#353b33;--panel:#ece4c8;--paper:#ddd4b8;--ink:#172919;--ink2:#3d583f;--red:#8f2f2a;--muted:#4f5a50;--line:#77745d;--button:#b9b393;--chip:#c9c2a3;--display:"Oswald","Arial Narrow",sans-serif;--ui:"IBM Plex Sans",system-ui,sans-serif}
-body:not(.blueprint):not(.warroom){--display:"Barlow Condensed","Arial Narrow",sans-serif;--chip:#e7edf1}
+body.warroom{--page:#080d0b;--panel:#101813;--paper:#0c1511;--ink:#b9f6cd;--ink2:#71c98d;--red:#ff665a;--muted:#789486;--line:#31523e;--button:#17251c;--chip:#142419;--display:"Rajdhani","Arial Narrow",sans-serif;--ui:"IBM Plex Sans",system-ui,sans-serif}
+body:not(.blueprint):not(.warroom){--page:#a9ad9a;--panel:#e7e4cf;--paper:#d9ddc5;--ink:#26392f;--ink2:#49604f;--red:#b34a32;--muted:#687269;--line:#69725f;--button:#c7cbb6;--accent:#c98a36;--chip:#cfd4bd;--display:"Barlow Condensed","Arial Narrow",sans-serif;--ui:"IBM Plex Sans",system-ui,sans-serif}
 .panelHead{padding:18px 20px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.02))}
 .panelBody{padding:18px 20px 20px}
 .dashTitle{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -527,18 +527,182 @@ body.warroom .howTo{background:rgba(255,248,220,.18)}
   #scene{touch-action:none}
 }
 </style>
+
+<style>
+/* V0.10.20 visual identity: terminal War Room + neo-organic Field Guide */
+
+/* FIELD GUIDE — rugged outdoor instrument / field computer */
+body:not(.blueprint):not(.warroom){
+  background:
+    radial-gradient(circle at 18% 0%,rgba(255,255,255,.16),transparent 32%),
+    linear-gradient(145deg,#969b88,#b7baa4 48%,#8f9581);
+}
+body:not(.blueprint):not(.warroom) .top{
+  background:linear-gradient(180deg,#3c493f,#303a33);
+  border:1px solid #596359;
+  border-radius:5px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 5px 14px rgba(35,43,36,.24);
+}
+body:not(.blueprint):not(.warroom) h1{color:#e9edd9;text-shadow:0 2px 0 #1a221c;letter-spacing:.045em}
+body:not(.blueprint):not(.warroom) .sub{color:#cbd2c3}
+body:not(.blueprint):not(.warroom) .version{
+  background:#c88933;color:#17251c;border-color:#e0a550;border-radius:2px;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)
+}
+body:not(.blueprint):not(.warroom) .theme{color:#e5e8d7}
+body:not(.blueprint):not(.warroom) .theme select{
+  background:#202d25;color:#dce8d8;border-color:#697a6b;border-radius:3px
+}
+body:not(.blueprint):not(.warroom) .stage,
+body:not(.blueprint):not(.warroom) .panel{
+  border-radius:5px;border-color:#5d6657;
+  box-shadow:0 5px 16px rgba(31,38,31,.22),inset 0 0 0 2px rgba(255,255,255,.08)
+}
+body:not(.blueprint):not(.warroom) .panelHead{
+  background:linear-gradient(180deg,#485449,#3b463d);
+  border-bottom-color:#202a23
+}
+body:not(.blueprint):not(.warroom) .panelHead h2{color:#edf1de}
+body:not(.blueprint):not(.warroom) .kicker{color:#f0b34e}
+body:not(.blueprint):not(.warroom) .panelBody{background:#dedfcb}
+body:not(.blueprint):not(.warroom) .readout .metric{
+  background:#c7cbb6;border-color:#707866;border-radius:3px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)
+}
+body:not(.blueprint):not(.warroom) .status{
+  background:#d0d3bc;border-color:#8a5c3b;border-left:5px solid #b34a32;border-radius:3px
+}
+body:not(.blueprint):not(.warroom) .fire,
+body:not(.blueprint):not(.warroom) .mobileFire{
+  background:linear-gradient(180deg,#314a36,#24392a);color:#edf4e8;
+  border-color:#18271d;border-radius:3px;
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.24),0 3px 8px rgba(32,43,34,.20)
+}
+body:not(.blueprint):not(.warroom) .stateChip{
+  border-radius:2px;background:#26372c;color:#b8d6bd;border-color:#596b5c
+}
+body:not(.blueprint):not(.warroom) .audioControls,
+body:not(.blueprint):not(.warroom) .howTo,
+body:not(.blueprint):not(.warroom) .mobileBattleControls{
+  background:rgba(207,212,189,.88);border-radius:3px;border-color:#69725f
+}
+body:not(.blueprint):not(.warroom) input[type=range]{accent-color:#c88933}
+body:not(.blueprint):not(.warroom) .stage .commandCompass .sectorPlaque{
+  border-radius:2px;background:rgba(211,215,193,.92)
+}
+
+/* WAR ROOM — dark retro command terminal */
+body.warroom{
+  background:
+    radial-gradient(circle at 48% -15%,rgba(38,111,64,.18),transparent 34%),
+    linear-gradient(180deg,#07100c,#050806 68%,#090c09);
+  color:#c7e9d1;
+}
+body.warroom .top{
+  position:relative;padding:11px 14px;
+  background:linear-gradient(180deg,#101a14,#09110d);
+  border:1px solid #31523e;border-radius:2px;
+  box-shadow:inset 0 0 0 1px rgba(138,245,173,.04),0 0 24px rgba(0,0,0,.42)
+}
+body.warroom .top:before{
+  content:"COMMAND // WEST BATTERY // LINK ACTIVE";
+  position:absolute;right:14px;top:5px;
+  color:#5c9b70;font:700 8px var(--ui);letter-spacing:.16em;opacity:.7
+}
+body.warroom h1{color:#c7ffd8;text-shadow:0 0 12px rgba(88,236,135,.18);letter-spacing:.065em}
+body.warroom .sub{color:#769786}
+body.warroom .version{
+  background:#281310;border:1px solid #813c35;color:#ff8c7f;border-radius:0;
+  box-shadow:0 0 12px rgba(255,74,62,.12)
+}
+body.warroom .theme{color:#83b594}
+body.warroom .theme select{
+  background:#0a120e;color:#aee9bf;border:1px solid #31523e;border-radius:0
+}
+body.warroom .stage,
+body.warroom .panel{
+  border-radius:2px;border-color:#2f4f3a;background:#08110d;
+  box-shadow:inset 0 0 0 1px rgba(141,245,172,.035),0 7px 25px rgba(0,0,0,.46)
+}
+body.warroom .stage:before{
+  background:
+    repeating-linear-gradient(180deg,rgba(137,255,174,.025) 0,rgba(137,255,174,.025) 1px,transparent 1px,transparent 4px),
+    radial-gradient(circle at 50% 45%,rgba(88,235,133,.04),transparent 54%);
+  opacity:.78
+}
+body.warroom .stage:after{
+  content:"";
+  position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:linear-gradient(90deg,transparent 0 48%,rgba(146,255,179,.018) 50%,transparent 52%);
+  mix-blend-mode:screen
+}
+body.warroom .panelHead{
+  position:relative;background:linear-gradient(180deg,#122319,#0c1811);
+  border-bottom:1px solid #2a4a35
+}
+body.warroom .panelHead:before{
+  content:"> FIRE CONTROL / LIVE";
+  position:absolute;right:12px;bottom:6px;color:#578d68;
+  font:700 8px var(--ui);letter-spacing:.14em
+}
+body.warroom .panelBody{background:#0c1510}
+body.warroom .panel h2{color:#bff7cf}
+body.warroom .kicker{color:#f4b24e}
+body.warroom .readout .metric{
+  background:#0d1c14;border-color:#294834;border-radius:0;
+  box-shadow:inset 0 0 12px rgba(75,197,110,.025)
+}
+body.warroom .readout .metric span{color:#678c73}
+body.warroom .readout strong{color:#b9f6cd}
+body.warroom .status{
+  background:#111b14;border:1px solid #4a2e28;border-left:4px solid #ff665a;
+  color:#b7d7c0;border-radius:0
+}
+body.warroom .fire,
+body.warroom .mobileFire{
+  background:linear-gradient(180deg,#1a3925,#102719);color:#caffd7;
+  border:1px solid #4b9862;border-radius:0;
+  box-shadow:inset 0 0 0 1px rgba(147,255,178,.05),0 0 14px rgba(57,178,92,.10);
+  text-shadow:0 0 8px rgba(128,255,162,.20)
+}
+body.warroom .fire:hover{filter:brightness(1.12)}
+body.warroom .stateChip{
+  border-radius:0;background:#0c2617;color:#75dd93;border-color:#37784b;
+  box-shadow:0 0 10px rgba(75,208,109,.07)
+}
+body.warroom .audioControls,
+body.warroom .howTo,
+body.warroom .mobileBattleControls{
+  background:rgba(7,18,12,.88);border:1px solid #294735;border-radius:0
+}
+body.warroom .audioToggle{background:#11251a;border-color:#315b40;color:#9ce9b2;border-radius:0}
+body.warroom input[type=range]{accent-color:#6fde8c}
+body.warroom .hud{color:#caffd7;text-shadow:0 0 8px rgba(87,225,129,.18)}
+body.warroom .hud span{color:#6d9e7c}
+body.warroom .callout{color:#ff7165;text-shadow:0 0 16px rgba(255,71,59,.26)}
+body.warroom .stage .commandCompass .sectorPlaque{
+  background:rgba(9,24,15,.92);border-color:#31543c;color:#afe9be;border-radius:0
+}
+body.warroom .stage .commandCompass .sectorPlaque.active{
+  background:#10271a!important;box-shadow:inset 0 -3px 0 currentColor!important
+}
+body.warroom .stage .commandCompass .compassBubble{
+  background:#09140e;border-color:#426d4f;color:#9eeab4
+}
+body.warroom .frontCard em{background:#11261a;color:#78cc91;border-radius:0}
+</style>
 </head>
 <body>
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.19 DIRECT AIM</span></h1>
-      <div class="sub">Direct grid aiming, destructible cover, reconnaissance feedback, impact pulses, and voice-callout hooks.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.20 VISUAL SYSTEMS</span></h1>
+      <div class="sub">Three tactical visual systems: rugged Field Guide, technical Blueprint, and dark terminal War Room.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
       <select id="theme">
-        <option value="notebook">Field Notebook</option>
+        <option value="notebook">Field Guide</option>
         <option value="blueprint">Blueprint</option>
         <option value="warroom">War Room</option>
       </select>
@@ -941,9 +1105,9 @@ function playVoiceCallout(key){
 
 
 var palettes={
-  notebook:{bg:"#f7f1e4",board:"#edf5f6",grid:"rgba(49,112,158,.25)",ink:"#12375d",red:"#a33831",top:"#cfc6a9",side:"#aaa085",shadow:"rgba(20,30,38,.16)"},
+  notebook:{bg:"#aeb39d",board:"#d9ddc5",grid:"rgba(52,75,58,.30)",ink:"#26392f",red:"#b34a32",top:"#b5b99f",side:"#858b76",shadow:"rgba(30,38,31,.20)"},
   blueprint:{bg:"#0b2538",board:"#123750",grid:"rgba(125,219,255,.30)",ink:"#c4efff",red:"#ff746e",top:"#285975",side:"#173c53",shadow:"rgba(0,0,0,.32)"},
-  warroom:{bg:"#ddd4b8",board:"#eee6c9",grid:"rgba(42,72,43,.30)",ink:"#172919",red:"#8f2f2a",top:"#a7a17c",side:"#74755a",shadow:"rgba(28,34,25,.24)"}
+  warroom:{bg:"#07100c",board:"#0d1a13",grid:"rgba(111,232,151,.22)",ink:"#b9f6cd",red:"#ff665a",top:"#163220",side:"#0d2116",shadow:"rgba(0,0,0,.48)"}
 };
 var pal=palettes.notebook;
 var theaterColors={
