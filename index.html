@@ -1291,7 +1291,7 @@ function isSalvoTurn(){return playerShotNumber%3===0;}
 function updateFireUi(){
   var text;
   if(salvoActive)text="PLOT "+(salvoPlots.length+1)+"/3";
-  else if(isSalvoTurn())text="START SALVO";
+  else if(isSalvoTurn())text="PLOT 1/3";
   else text=mobileDense()?"FIRE":"Lock & fire";
   if(fire)fire.textContent=text;
   if(mobileFire)mobileFire.textContent=text==="Lock & fire"?"FIRE":text;
@@ -1416,6 +1416,12 @@ function fireShot(){
   if(isSalvoTurn()){
     if(!salvoActive){salvoActive=true;salvoPlots=[];salvoQueue=[];}
     var plotted=solution();
+    var overlaps=salvoPlots.some(function(prev){return Math.hypot(prev.landX-plotted.landX,prev.landZ-plotted.landZ)<4.5;});
+    if(overlaps){
+      status.textContent="SALVO COORDINATE TOO CLOSE — move the reticle before locking this plot.";
+      flash("SPREAD FIRE");
+      return;
+    }
     salvoPlots.push(Object.assign({},plotted));
     status.textContent="SALVO PLOT "+salvoPlots.length+"/3 LOCKED"+(salvoPlots.length<3?" — adjust aim for next coordinate.":".");
     flash("PLOT "+salvoPlots.length);
