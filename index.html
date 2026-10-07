@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.9 — Integrated Command & Orbit</title>
+<title>Graph War V0.10.10 — Combat Audio</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -162,12 +162,17 @@ body.warroom .stage .commandCompass .sectorPlaque.active{background:#d3c69d;}
   .stage .commandCompass .sectorPlaque .dir{font-size:8px;}
 }
 </style>
-</head>
+<style>.audioControls{margin:13px 0 2px;padding:10px 11px;border:1px solid var(--line);border-radius:7px;background:rgba(255,255,255,.18)}
+.audioToggle{width:100%;min-height:34px;border:1px solid var(--line);border-radius:5px;background:var(--button);color:var(--ink);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.volumeLabel{margin:8px 0 2px;font-size:10px;letter-spacing:.08em}
+#audioVolume{height:22px}
+body.blueprint .audioControls{background:rgba(8,25,38,.24)}
+body.warroom .audioControls{background:rgba(255,248,220,.18)}</style></head>
 <body>
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.9 BOARD COMMAND</span></h1>
+      <h1>GRAPH WAR <span class="version">V0.10.10 COMBAT AUDIO</span></h1>
       <div class="sub">Warships now read as battlefield actors, not tokens: larger class-specific silhouettes, active-target brackets, hull details, board health bars, stronger contacts, and persistent damage history.</div>
     </div>
     <div class="theme">
@@ -231,6 +236,12 @@ body.warroom .stage .commandCompass .sectorPlaque.active{background:#d3c69d;}
 
       <button id="fire" class="fire">Lock & fire</button>
 
+      <div class="audioControls" aria-label="Combat audio controls">
+        <button id="muteAudio" class="audioToggle" type="button" aria-pressed="false">Sound on</button>
+        <label class="volumeLabel" for="audioVolume"><span>Volume</span><span id="audioVolumeVal">55%</span></label>
+        <input id="audioVolume" type="range" min="0" max="100" value="55" aria-label="Combat audio volume">
+      </div>
+
       <div class="readout">
         <div class="metric"><span>Bearing</span><strong id="bearingVal">0°</strong></div><div class="metric"><span>Landing</span><strong id="rangeVal">—</strong></div>
         <div class="metric"><span>Flight path</span><strong id="pathVal">—</strong></div>
@@ -273,6 +284,56 @@ var orbitLabel=document.getElementById("orbitLabel");
 var volleyLabel=document.getElementById("volleyLabel");
 var terrainLabel=document.getElementById("terrainLabel");
 var terrainNote=document.getElementById("terrainNote");
+var muteAudio=document.getElementById("muteAudio");
+var audioVolume=document.getElementById("audioVolume");
+var audioVolumeVal=document.getElementById("audioVolumeVal");
+var audioCtx=null;
+var audioMuted=false;
+var shellWhooshTimer=0;
+
+
+function ensureAudio(){
+  if(audioCtx)return audioCtx;
+  var AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)return null;
+  audioCtx=new AC();
+  return audioCtx;
+}
+function unlockAudio(){
+  var ac=ensureAudio();
+  if(ac&&ac.state==="suspended")ac.resume();
+}
+function audioGain(level){
+  var v=audioMuted?0:Number(audioVolume.value)/100;
+  return Math.max(0,Math.min(1,level*v));
+}
+function tone(freq,duration,level,type,when){
+  var ac=ensureAudio();if(!ac||audioMuted)return;
+  var t=ac.currentTime+(when||0),osc=ac.createOscillator(),g=ac.createGain();
+  osc.type=type||"sine";osc.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0001,audioGain(level)),t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+duration);
+  osc.connect(g).connect(ac.destination);osc.start(t);osc.stop(t+duration+.03);
+}
+function noiseBurst(duration,level,filterFreq,when){
+  var ac=ensureAudio();if(!ac||audioMuted)return;
+  var t=ac.currentTime+(when||0),len=Math.max(1,Math.floor(ac.sampleRate*duration)),buf=ac.createBuffer(1,len,ac.sampleRate),data=buf.getChannelData(0);
+  for(var i=0;i<len;i++)data[i]=(Math.random()*2-1)*(1-i/len);
+  var src=ac.createBufferSource(),filter=ac.createBiquadFilter(),g=ac.createGain();
+  src.buffer=buf;filter.type="lowpass";filter.frequency.value=filterFreq||1200;
+  g.gain.setValueAtTime(Math.max(.0001,audioGain(level)),t);g.gain.exponentialRampToValueAtTime(.0001,t+duration);
+  src.connect(filter).connect(g).connect(ac.destination);src.start(t);
+}
+function sfxCannon(){tone(78,.20,.68,"sawtooth",0);tone(46,.28,.46,"sine",.015);noiseBurst(.22,.45,900,0);}
+function sfxWhoosh(){tone(610,.10,.09,"triangle",0);tone(470,.12,.07,"triangle",.09);}
+function sfxSplash(){noiseBurst(.36,.38,1800,0);tone(180,.18,.10,"sine",.04);}
+function sfxTerrain(){noiseBurst(.24,.52,650,0);tone(96,.20,.24,"square",0);}
+function sfxHit(){noiseBurst(.34,.62,820,0);tone(70,.30,.46,"sawtooth",0);tone(43,.38,.28,"sine",.05);}
+function sfxIncomingCue(){tone(760,.10,.20,"square",0);tone(880,.10,.18,"square",.13);}
+function updateAudioUi(){
+  muteAudio.textContent=audioMuted?"Sound off":"Sound on";
+  muteAudio.setAttribute("aria-pressed",audioMuted?"true":"false");
+  audioVolumeVal.textContent=audioVolume.value+"%";
+}
 
 if(!ctx){
   status.textContent="Canvas rendering is unavailable in this browser.";
@@ -761,7 +822,9 @@ function drawShot(now,theta){
     var qi=startQ+(q-startQ)*i/24;var wp=trajectoryPoint(shot.sol,shot.endT*qi);var sp=proj(wp.x,wp.y,wp.z,theta);
     if(i===0)ctx.moveTo(sp.x,sp.y);else ctx.lineTo(sp.x,sp.y);
   }
-  ctx.stroke();ctx.restore();var w=trajectoryPoint(shot.sol,t);var p=proj(w.x,w.y,w.z,theta);ctx.fillStyle=pal.red;ctx.beginPath();ctx.arc(p.x,p.y,5.5,0,Math.PI*2);ctx.fill();
+  ctx.stroke();ctx.restore();
+  if(q>.16&&q<.92&&performance.now()-shellWhooshTimer>180){sfxWhoosh();shellWhooshTimer=performance.now();}
+  var w=trajectoryPoint(shot.sol,t);var p=proj(w.x,w.y,w.z,theta);ctx.fillStyle=pal.red;ctx.beginPath();ctx.arc(p.x,p.y,5.5,0,Math.PI*2);ctx.fill();
   if(q>=1&&!shot.done){shot.done=true;resolveShot(shot.sol);}
 }
 
@@ -772,7 +835,7 @@ function flash(text){
 function resolveShot(sol){
   var x;var kind;var z;
   if(sol.collision){
-    x=sol.collision.x;z=sol.collision.z;kind="ridge";status.textContent="RIDGE STRIKE — raise the arc or change power.";flash("RIDGE STRIKE");
+    x=sol.collision.x;z=sol.collision.z;kind="ridge";status.textContent="RIDGE STRIKE — raise the arc or change power.";flash("RIDGE STRIKE");sfxTerrain();
   }else{
     x=sol.landX;z=sol.landZ;var missDistance=target?Math.hypot(x-target.x,z-target.z):999;
     if(target&&missDistance<=target.r){
@@ -781,9 +844,9 @@ function resolveShot(sol){
         var struckShip=damageResult.ship;var stateAfter=shipState(struckShip).toUpperCase();
         status.textContent="DIRECT HIT — "+(damageResult.wasHidden?"CONTACT REVEALED · ":"")+struckShip.name+" "+stateAfter+".";
       }else{status.textContent="DIRECT HIT — enemy fleet damaged.";}
-      flash(damageResult&&damageResult.wasHidden?"CONTACT!":"DIRECT HIT");
+      flash(damageResult&&damageResult.wasHidden?"CONTACT!":"DIRECT HIT");sfxHit();
     }else{
-      kind="miss";status.textContent=x>100?"LONG — shot left the chart.":"SPLASH — correct from the mark.";flash(x>100?"LONG":"SPLASH");
+      kind="miss";status.textContent=x>100?"LONG — shot left the chart.":"SPLASH — correct from the mark.";flash(x>100?"LONG":"SPLASH");sfxSplash();
     }
   }
 
@@ -795,6 +858,8 @@ function resolveShot(sol){
 
 function fireShot(){
   if(shot||returningFire)return;
+  unlockAudio();
+  sfxCannon();
   var sol=solution();shot={sol:sol,start:performance.now(),duration:1450,endT:sol.collision?sol.collision.t:sol.totalT,done:false};
   fire.disabled=true;status.textContent="SHOT AWAY — watch the ridge clearance.";flash("SHOT AWAY");
 }
@@ -824,7 +889,7 @@ function beginReturnVolley(){
   ["north","east","south"].forEach(function(front){if(frontEliminated(front))return;if(front===lastAttackedFront||Math.random()<.35)order.push(front);});
   if(!order.length&&!frontEliminated(lastAttackedFront))order.push(lastAttackedFront);
   status.textContent=order.length>1?"INCOMING VOLLEY — multiple fronts responding.":"INCOMING FIRE — "+(order[0]||"enemy")+" front responding.";
-  flash("INCOMING!");orbitLabel.textContent="Camera: tracking return fire";runIncomingFront(order,0);
+  flash("INCOMING!");sfxIncomingCue();orbitLabel.textContent="Camera: tracking return fire";runIncomingFront(order,0);
 }
 function runIncomingFront(order,index){
   if(index>=order.length){
@@ -836,8 +901,8 @@ function runIncomingFront(order,index){
 }
 function resolveIncoming(s){
   homeMarks.push({x:s.end.x,z:s.end.z,hit:s.hit,front:s.front});if(homeMarks.length>12)homeMarks.shift();
-  if(s.hit){var struck=damageWestShip();homeDamage++;flash(s.label+" HIT");status.textContent=s.label+" FRONT hit West"+(struck?" · "+struck.name+" damaged.":".");renderFleets();}
-  else{flash("SPLASH");status.textContent=s.label+" FRONT missed West.";}
+  if(s.hit){var struck=damageWestShip();homeDamage++;flash(s.label+" HIT");sfxHit();status.textContent=s.label+" FRONT hit West"+(struck?" · "+struck.name+" damaged.":".");renderFleets();}
+  else{flash("SPLASH");sfxSplash();status.textContent=s.label+" FRONT missed West.";}
   updateFrontIntel();var order=s.order||[];var next=s.index+1;incomingShot=null;setTimeout(function(){runIncomingFront(order,next);},260);
 }
 
@@ -917,6 +982,9 @@ canvas.addEventListener("pointerup",function(e){draggingBearing=false;try{canvas
 canvas.addEventListener("pointercancel",function(){draggingBearing=false;});
 
 angle.addEventListener("input",aimChanged);power.addEventListener("input",aimChanged);fire.addEventListener("click",fireShot);
+muteAudio.addEventListener("click",function(){unlockAudio();audioMuted=!audioMuted;updateAudioUi();if(!audioMuted)tone(440,.09,.10,"sine",0);});
+audioVolume.addEventListener("input",updateAudioUi);
+audioVolume.addEventListener("change",function(){unlockAudio();if(!audioMuted)tone(520,.08,.08,"sine",0);});
 
 theme.addEventListener("change",function(){document.body.classList.remove("blueprint","warroom");if(this.value!=="notebook")document.body.classList.add(this.value);pal=palettes[this.value];});
 
