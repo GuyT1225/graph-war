@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.15 — Mobile Declutter & Aim Feedback</title>
+<title>Graph War V0.10.16 — Naval Audio Pass</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -498,13 +498,13 @@ body.warroom .howTo{background:rgba(255,248,220,.18)}
   .mbcSlider:focus-within label strong{text-shadow:0 0 8px currentColor}
 }
 </style>
-</head>
+<style>.audioCredit{font-size:9px;opacity:.58;letter-spacing:.04em;margin:4px 0 0}</style></head>
 <body>
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.15 AIM FEEDBACK</span></h1>
-      <div class="sub">Cleaner mobile labels with dual-color power and angle targeting feedback.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.16 NAVAL AUDIO</span></h1>
+      <div class="sub">Real CC0 naval cannon, impact, and splash recordings layered with arcade trajectory cues.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -584,6 +584,7 @@ body.warroom .howTo{background:rgba(255,248,220,.18)}
         <input id="audioVolume" type="range" min="0" max="100" value="55" aria-label="Combat audio volume">
       </div>
 
+      <div class="audioCredit">Naval SFX: qubodup · CC0</div>
       <details class="howTo">
         <summary>How to play</summary>
         <div class="howToBody">
@@ -649,6 +650,24 @@ var mobileFire=document.getElementById("mobileFire");
 var audioCtx=null;
 var audioMuted=false;
 var shellWhooshTimer=0;
+var sampleSfx={
+  cannon:new Audio("assets/audio/fire_heavy.wav"),
+  impact:new Audio("assets/audio/impact_pen.wav"),
+  splash:new Audio("assets/audio/water_explode.opus")
+};
+Object.keys(sampleSfx).forEach(function(key){sampleSfx[key].preload="auto";});
+function playSample(key,level,rate){
+  if(audioMuted)return false;
+  var base=sampleSfx[key];if(!base)return false;
+  try{
+    var a=base.cloneNode(true);
+    a.volume=Math.max(0,Math.min(1,(Number(audioVolume.value)/100)*(level==null?1:level)));
+    a.playbackRate=rate||1;
+    var p=a.play();
+    if(p&&p.catch)p.catch(function(){});
+    return true;
+  }catch(err){return false;}
+}
 
 
 function ensureAudio(){
@@ -660,7 +679,11 @@ function ensureAudio(){
 }
 function unlockAudio(){
   var ac=ensureAudio();
-  if(ac&&ac.state==="suspended")ac.resume();
+  if(!ac)return Promise.resolve(null);
+  if(ac.state==="suspended"){
+    return ac.resume().then(function(){return ac;}).catch(function(){return ac;});
+  }
+  return Promise.resolve(ac);
 }
 function audioGain(level){
   var v=audioMuted?0:Number(audioVolume.value)/100;
@@ -682,11 +705,22 @@ function noiseBurst(duration,level,filterFreq,when){
   g.gain.setValueAtTime(Math.max(.0001,audioGain(level)),t);g.gain.exponentialRampToValueAtTime(.0001,t+duration);
   src.connect(filter).connect(g).connect(ac.destination);src.start(t);
 }
-function sfxCannon(){tone(78,.20,.68,"sawtooth",0);tone(46,.28,.46,"sine",.015);noiseBurst(.22,.45,900,0);}
+function sfxCannon(){
+  if(!playSample("cannon",.92,1)){tone(78,.20,.68,"sawtooth",0);tone(46,.28,.46,"sine",.015);noiseBurst(.22,.45,900,0);}
+}
+function sfxEnemyCannon(){
+  if(!playSample("cannon",.62,.86)){tone(64,.20,.38,"sawtooth",0);noiseBurst(.18,.28,760,0);}
+}
 function sfxWhoosh(){tone(610,.10,.09,"triangle",0);tone(470,.12,.07,"triangle",.09);}
-function sfxSplash(){noiseBurst(.36,.38,1800,0);tone(180,.18,.10,"sine",.04);}
-function sfxTerrain(){noiseBurst(.24,.52,650,0);tone(96,.20,.24,"square",0);}
-function sfxHit(){noiseBurst(.34,.62,820,0);tone(70,.30,.46,"sawtooth",0);tone(43,.38,.28,"sine",.05);}
+function sfxSplash(){
+  if(!playSample("splash",.78,1)){noiseBurst(.36,.38,1800,0);tone(180,.18,.10,"sine",.04);}
+}
+function sfxTerrain(){
+  if(!playSample("impact",.62,.76)){noiseBurst(.24,.52,650,0);tone(96,.20,.24,"square",0);}
+}
+function sfxHit(){
+  if(!playSample("impact",.90,1)){noiseBurst(.34,.62,820,0);tone(70,.30,.46,"sawtooth",0);tone(43,.38,.28,"sine",.05);}
+}
 function sfxIncomingCue(){tone(760,.10,.20,"square",0);tone(880,.10,.18,"square",.13);}
 function updateAudioUi(){
   muteAudio.textContent=audioMuted?"Sound off":"Sound on";
@@ -1331,6 +1365,7 @@ function runIncomingFront(order,index){
     var aliveWest=westFleet.filter(function(ship){return ship.hp>0;}).length;
     status.textContent=aliveWest<3?"RETURN FIRE RESOLVED — West fleet status updated.":"RETURN FIRE RESOLVED — West is still holding.";fire.disabled=false;if(mobileFire)mobileFire.disabled=false;return;
   }
+  sfxEnemyCannon();
   incomingShot=incomingSpec(order[index],index);incomingShot.order=order;incomingShot.startTime=performance.now();status.textContent=order[index].toUpperCase()+" FRONT — incoming round.";
 }
 function resolveIncoming(s){
@@ -1459,9 +1494,13 @@ canvas.addEventListener("pointerup",function(e){
 });
 canvas.addEventListener("pointercancel",function(){draggingBearing=false;bearingPointerStart=null;});
 
-angle.addEventListener("input",aimChanged);power.addEventListener("input",aimChanged);fire.addEventListener("click",fireShot);
+angle.addEventListener("input",aimChanged);power.addEventListener("input",aimChanged);
+fire.addEventListener("pointerdown",unlockAudio,{passive:true});
+fire.addEventListener("click",fireShot);
 mobileAngle.addEventListener("input",syncDesktopFromMobile);
 mobilePower.addEventListener("input",syncDesktopFromMobile);
+mobileFire.addEventListener("pointerdown",unlockAudio,{passive:true});
+mobileFire.addEventListener("touchstart",unlockAudio,{passive:true});
 mobileFire.addEventListener("click",fireShot);
 muteAudio.addEventListener("click",function(){unlockAudio();audioMuted=!audioMuted;updateAudioUi();if(!audioMuted)tone(440,.09,.10,"sine",0);});
 audioVolume.addEventListener("input",updateAudioUi);
