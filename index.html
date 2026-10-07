@@ -504,7 +504,7 @@ body.warroom .howTo{background:rgba(255,248,220,.18)}
   <div class="top">
     <div>
       <h1>GRAPH WAR <span class="version">V0.10.15 AIM FEEDBACK</span></h1>
-      <div class="sub">Distinct theater colors, stronger arcade-scale targeting, larger projectiles, and cleaner battlefield hierarchy.</div>
+      <div class="sub">Cleaner mobile labels with dual-color power and angle targeting feedback.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -1009,18 +1009,21 @@ function drawWake(ship,theta,state){
     line([bx+ox,.13,bz+oz],[bx-Math.cos(h)*11+ox,.13,bz-Math.sin(h)*11+oz],shipFrontColor(ship!==undefined&&profiles[currentFront].fleet.indexOf(ship)!==-1),2.0,theta,[4,5]);
   });
 }
-function drawContactZone(ship,theta){
-  var p=proj(ship.x,.3,ship.z,theta);
+function drawContactZone(ship,theta,isActive,index){
+  var p=proj(ship.x,.3,ship.z,theta),mobile=mobileDense();
+  var contactColor=theaterColor(currentFront);
   ctx.save();
-  var contactColor=theaterColor(currentFront);ctx.strokeStyle=contactColor;ctx.lineWidth=3;ctx.globalAlpha=.72;ctx.setLineDash([8,6]);
-  ctx.beginPath();ctx.ellipse(p.x,p.y,43,19,0,0,Math.PI*2);ctx.stroke();
-  ctx.setLineDash([]);ctx.globalAlpha=.12;ctx.fillStyle=contactColor;
-  ctx.beginPath();ctx.ellipse(p.x,p.y,39,15,0,0,Math.PI*2);ctx.fill();
-  ctx.globalAlpha=.36;ctx.beginPath();ctx.arc(p.x,p.y,31,Math.PI*.15,Math.PI*.85);ctx.stroke();
-  ctx.beginPath();ctx.arc(p.x,p.y,25,Math.PI*1.15,Math.PI*1.85);ctx.stroke();
-  ctx.globalAlpha=.88;ctx.fillStyle=contactColor;ctx.font="800 10px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";
-  ctx.fillText("UNKNOWN CONTACT",p.x,p.y-25);
-  ctx.font="800 22px "+getComputedStyle(document.body).getPropertyValue("--display");ctx.fillText("?",p.x,p.y+7);
+  ctx.strokeStyle=contactColor;ctx.lineWidth=isActive?3.4:2.5;ctx.globalAlpha=isActive?.82:(mobile?.46:.66);ctx.setLineDash([8,6]);
+  ctx.beginPath();ctx.ellipse(p.x,p.y,isActive?45:39,isActive?20:17,0,0,Math.PI*2);ctx.stroke();
+  ctx.setLineDash([]);ctx.globalAlpha=isActive?.14:.07;ctx.fillStyle=contactColor;
+  ctx.beginPath();ctx.ellipse(p.x,p.y,isActive?41:35,isActive?16:13,0,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=isActive?.92:.68;ctx.fillStyle=contactColor;ctx.textAlign="center";
+  ctx.font="800 "+(isActive?24:20)+"px "+getComputedStyle(document.body).getPropertyValue("--display");
+  ctx.fillText("?",p.x,p.y+7);
+  if(isActive||!mobile){
+    ctx.font="800 "+(mobile?9:10)+"px "+getComputedStyle(document.body).getPropertyValue("--ui");
+    ctx.fillText(isActive?"TARGET CONTACT":"UNKNOWN CONTACT",p.x,p.y-(isActive?29:25));
+  }
   ctx.restore();
 }
 function drawShipImpactHistory(ship,theta,state){
@@ -1080,10 +1083,10 @@ function drawTargetBrackets(ship,theta){
   });
   ctx.setLineDash([5,5]);ctx.globalAlpha=.55;ctx.beginPath();ctx.arc(p.x,p.y,34,0,Math.PI*2);ctx.stroke();
   ctx.setLineDash([]);ctx.font="800 10px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";ctx.fillStyle=color;ctx.globalAlpha=1;
-  if(!mobileDense())ctx.fillText("ACTIVE TARGET",p.x,p.y-39);
+  if(!mobileDense())ctx.fillText(mobileDense()?"TARGET":"ACTIVE TARGET",p.x,p.y-43);
   ctx.restore();
 }
-function drawWorldShip(ship,theta,isEnemy){
+function drawWorldShip(ship,theta,isEnemy,isActive,index){
   var p=proj(ship.x,.8,ship.z,theta);
   var state=shipState(ship);
   var hidden=isEnemy&&!ship.revealed&&state==="intact";
@@ -1091,7 +1094,7 @@ function drawWorldShip(ship,theta,isEnemy){
   if(ship.justHit){
     ctx.save();ctx.fillStyle=pal.red;ctx.globalAlpha=.22+.14*Math.sin(performance.now()/70);ctx.beginPath();ctx.arc(p.x,p.y,46,0,Math.PI*2);ctx.fill();ctx.restore();
   }
-  if(hidden){drawContactZone(ship,theta);return;}
+  if(hidden){drawContactZone(ship,theta,isActive,index);return;}
 
   var sz=shipWorldSize(ship);
   drawWake(ship,theta,state);
@@ -1131,17 +1134,23 @@ function drawWorldShip(ship,theta,isEnemy){
     ctx.save();ctx.strokeStyle=pal.red;ctx.lineWidth=5;ctx.globalAlpha=.82;ctx.beginPath();ctx.moveTo(p.x-28,p.y-20);ctx.lineTo(p.x+28,p.y+20);ctx.stroke();ctx.restore();
   }
 
-  ctx.save();ctx.fillStyle=state==="sunk"?pal.red:factionColor;ctx.font="800 14px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";
-  var isActiveEnemy=isEnemy&&ship===activeEnemyShip(currentFront);
-  var boardLabel=mobileDense()&&!isActiveEnemy?ship.code:(ship.code+" · "+sz.label);
-  ctx.fillText(boardLabel,p.x,p.y-24);ctx.restore();
+  var activeEnemy=isEnemy&&isActive;
+  var compact=mobileDense()&&!activeEnemy;
+  var boardLabel=compact?ship.code:(ship.code+" · "+sz.label);
+  var labelOffset=compact?((index||0)%2)*13:0;
+  ctx.save();ctx.fillStyle=state==="sunk"?pal.red:factionColor;ctx.font="800 "+(activeEnemy?14:(compact?12:14))+"px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";
+  ctx.globalAlpha=activeEnemy?1:(compact?.74:.92);
+  ctx.fillText(boardLabel,p.x,p.y-25-labelOffset);ctx.restore();
   drawBoardHealth(ship,theta,state,isEnemy);
 }
 function drawBattlefieldFleets(theta){
-  var active=activeEnemyShip(currentFront);
-  profiles[currentFront].fleet.forEach(function(ship){drawWorldShip(ship,theta,true);});
-  westFleet.forEach(function(ship){drawWorldShip(ship,theta,false);});
-  if(active&&active.revealed)drawTargetBrackets(active,theta);
+  var active=activeEnemyShip(currentFront),enemyFleet=profiles[currentFront].fleet;
+  enemyFleet.forEach(function(ship,index){if(ship!==active)drawWorldShip(ship,theta,true,false,index);});
+  westFleet.forEach(function(ship,index){drawWorldShip(ship,theta,false,false,index);});
+  if(active){
+    drawWorldShip(active,theta,true,true,enemyFleet.indexOf(active));
+    if(active.revealed)drawTargetBrackets(active,theta);
+  }
 }
 function drawTarget(theta){
   if(!target)return;
@@ -1173,7 +1182,7 @@ function drawCompass(theta){
 function drawHomeMarks(theta){
   homeMarks.forEach(function(h){
     var p=proj(h.x,.35,h.z,theta);
-    ctx.save();ctx.strokeStyle=h.hit?theaterColor(h.front):theaterColor(h.front);ctx.globalAlpha=h.hit ? .82 : .48;ctx.lineWidth=h.hit?3.5:2.2;ctx.beginPath();
+    ctx.save();ctx.strokeStyle=h.hit?theaterColor(h.front):theaterColor(h.front);ctx.globalAlpha=mobileDense()?(h.hit?.52:.26):(h.hit?.82:.48);ctx.lineWidth=mobileDense()?(h.hit?2.7:1.7):(h.hit?3.5:2.2);ctx.beginPath();
     if(h.hit){ctx.moveTo(p.x-10,p.y-10);ctx.lineTo(p.x+10,p.y+10);ctx.moveTo(p.x+10,p.y-10);ctx.lineTo(p.x-10,p.y+10);}else{ctx.arc(p.x,p.y,7,0,Math.PI*2);}
     ctx.stroke();ctx.restore();
   });
@@ -1197,8 +1206,15 @@ function drawPreview(sol,theta){
   }
   ctx.stroke();ctx.restore();
   var retX=Math.max(0,Math.min(100,sol.landX));var retZ=Math.max(0,Math.min(100,sol.landZ));
-  line([gun.x,.12,gun.z],[retX,.12,retZ],pal.ink,1.25,theta,[5,7]);
-  drawCircleOnPlane(retX,retZ,6.2,sol.collision?pal.red:powerAimColor(),theta,true);
+  line([gun.x,.12,gun.z],[retX,.12,retZ],sol.collision?pal.red:powerAimColor(),1.4,theta,[5,7]);
+  if(sol.collision){
+    drawCircleOnPlane(retX,retZ,6.2,pal.red,theta,true);
+  }else{
+    drawCircleOnPlane(retX,retZ,7.2,powerAimColor(),theta,false);
+    drawCircleOnPlane(retX,retZ,4.0,angleAimColor(),theta,true);
+    line([retX-3.2,.22,retZ],[retX+3.2,.22,retZ],angleAimColor(),2.4,theta);
+    line([retX,.22,retZ-3.2],[retX,.22,retZ+3.2],angleAimColor(),2.4,theta);
+  }
 }
 
 function incomingPoint(s,t){
