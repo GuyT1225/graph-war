@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.18 — Damage Intel & Salvo Volley</title>
+<title>Graph War V0.10.19 — Direct Aim & Battlefield Feedback</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -521,13 +521,19 @@ body.warroom .howTo{background:rgba(255,248,220,.18)}
   .mobileFire:not(:disabled){box-shadow:0 3px 10px rgba(0,0,0,.18)}
 }
 </style>
+<style>
+/* V0.10.19 direct battlefield aiming */
+@media(max-width:700px){
+  #scene{touch-action:none}
+}
+</style>
 </head>
 <body>
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.18 DAMAGE + SALVO</span></h1>
-      <div class="sub">Progressive damage intelligence and a three-coordinate salvo every third player shot.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.19 DIRECT AIM</span></h1>
+      <div class="sub">Direct grid aiming, destructible cover, reconnaissance feedback, impact pulses, and voice-callout hooks.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -863,6 +869,15 @@ westFleet.forEach(function(ship,i){
   ship.z=westPositions[i].z;
   ship.heading=westPositions[i].heading||0;
 });
+["north","east","south"].forEach(function(front){
+  profiles[front].obstacles.forEach(function(obstacle,index){
+    obstacle.id=front+"-"+index;
+    obstacle.maxHp=2;
+    obstacle.hp=2;
+    obstacle.justHitUntil=0;
+  });
+  profiles[front].fleet.forEach(function(ship){ship.reconHits=0;});
+});
 
 function activeEnemyShip(front){
   return profiles[front].fleet.find(function(ship){return ship.hp>0;})||null;
@@ -889,10 +904,41 @@ var aimingUntil=0;
 var bearing=0;
 var cameraTheta=-.20;
 var draggingBearing=false;
+var directAimActive=false;
+var directAimPointer=null;
+var frozenAimTheta=-.20;
+var directAimPoint=null;
+var impactPulses=[];
+var voiceCalloutHooks={};
 var lastAttackedFront="east";
 var theaterOrientation={east:0,north:-Math.PI/2,south:Math.PI/2};
 
 function currentObstacles(){return profiles[currentFront].obstacles;}
+function obstacleHeight(obstacle){
+  if(!obstacle||obstacle.hp<=0)return 0;
+  return obstacle.h*(.34+.66*(obstacle.hp/obstacle.maxHp));
+}
+function obstacleAt(x,z){
+  var obs=currentObstacles();
+  for(var i=0;i<obs.length;i++){
+    var b=obs[i];
+    if(b.hp>0&&x>=b.x0&&x<=b.x1&&z>=b.z0&&z<=b.z1)return b;
+  }
+  return null;
+}
+function shipIntelLevel(ship){return Math.max(ship.intelHits||0,ship.reconHits||0);}
+function gridCoordinate(x,z){
+  var col=Math.max(0,Math.min(9,Math.floor(x/10)));
+  var row=Math.max(0,Math.min(9,Math.floor(z/10)));
+  return String.fromCharCode(65+col)+"-"+row;
+}
+function registerVoiceCallout(key,audio){voiceCalloutHooks[key]=audio;}
+function playVoiceCallout(key){
+  var source=voiceCalloutHooks[key];
+  if(!source||audioMuted)return;
+  try{var a=source.cloneNode?source.cloneNode(true):new Audio(source);a.volume=Math.min(1,Number(audioVolume.value)/100*.8);a.play().catch(function(){});}catch(err){}
+}
+
 
 var palettes={
   notebook:{bg:"#f7f1e4",board:"#edf5f6",grid:"rgba(49,112,158,.25)",ink:"#12375d",red:"#a33831",top:"#cfc6a9",side:"#aaa085",shadow:"rgba(20,30,38,.16)"},
@@ -994,25 +1040,47 @@ function drawBoard(theta){
     line([i,.05,0],[i,.05,100],pal.grid,1,theta);
     line([0,.05,i],[100,.05,i],pal.grid,1,theta);
   }
-}
 
+  ctx.save();
+  ctx.fillStyle=pal.ink;
+  ctx.globalAlpha=mobileDense()?.78:.66;
+  ctx.font="800 "+(mobileDense()?10:11)+"px "+getComputedStyle(document.body).getPropertyValue("--ui");
+  ctx.textAlign="center";ctx.textBaseline="middle";
+  for(var col=0;col<10;col++){
+    var lp=proj(col*10+5,.12,2,theta);
+    ctx.fillText(String.fromCharCode(65+col),lp.x,lp.y+12);
+  }
+  for(var row=0;row<10;row++){
+    var np=proj(2,.12,row*10+5,theta);
+    ctx.fillText(String(row),np.x-12,np.y);
+  }
+  ctx.restore();
+}
 function drawRidge(theta){
   var obs=currentObstacles();
   for(var i=0;i<obs.length;i++){
-    var b=obs[i];
-    poly([[b.x0,0,b.z0],[b.x1,0,b.z0],[b.x1,b.h,b.z0],[b.x0,b.h,b.z0]],pal.side,pal.ink,theta);
-    poly([[b.x1,0,b.z0],[b.x1,0,b.z1],[b.x1,b.h,b.z1],[b.x1,b.h,b.z0]],pal.side,pal.ink,theta);
-    poly([[b.x0,b.h,b.z0],[b.x1,b.h,b.z0],[b.x1,b.h,b.z1],[b.x0,b.h,b.z1]],pal.top,pal.ink,theta);
+    var b=obs[i],h=obstacleHeight(b);
+    if(h<=0){
+      ctx.save();ctx.globalAlpha=.28;
+      poly([[b.x0,.08,b.z0],[b.x1,.08,b.z0],[b.x1,.08,b.z1],[b.x0,.08,b.z1]],pal.side,pal.red,theta);
+      ctx.restore();
+      continue;
+    }
+    ctx.save();ctx.globalAlpha=b.hp<b.maxHp ? .78 : 1;
+    poly([[b.x0,0,b.z0],[b.x1,0,b.z0],[b.x1,h,b.z0],[b.x0,h,b.z0]],pal.side,pal.ink,theta);
+    poly([[b.x1,0,b.z0],[b.x1,0,b.z1],[b.x1,h,b.z1],[b.x1,h,b.z0]],pal.side,pal.ink,theta);
+    poly([[b.x0,h,b.z0],[b.x1,h,b.z0],[b.x1,h,b.z1],[b.x0,h,b.z1]],pal.top,pal.ink,theta);
+    ctx.restore();
+    if(b.hp<b.maxHp){
+      var cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;
+      line([cx-2,h+.15,cz-2],[cx+2,h+.15,cz+2],pal.red,2.5,theta);
+      line([cx+2,h+.15,cz-2],[cx-2,h+.15,cz+2],pal.red,2.5,theta);
+    }
   }
 }
-
 function ridgeHeightAt(x,z){
-  var obs=currentObstacles();
-  for(var i=0;i<obs.length;i++){
-    var b=obs[i];
-    if(x>=b.x0&&x<=b.x1&&z>=b.z0&&z<=b.z1)return b.h;
-  }
-  return 0;
+  var b=obstacleAt(x,z);
+  return b?obstacleHeight(b):0;
 }
 
 function speed(){return 50+(Number(power.value)*.45);}
@@ -1037,8 +1105,8 @@ function solution(){
     var x=gun.x+vx*t;
     var z=gun.z+vz*t;
     var y=gun.y+vy*t-.5*gravity*t*t;
-    var h=ridgeHeightAt(x,z);
-    if(h>0&&y<=h){collision={x:x,y:y,z:z,t:t,h:h};break;}
+    var obstacle=obstacleAt(x,z);var h=obstacle?obstacleHeight(obstacle):0;
+    if(h>0&&y<=h){collision={x:x,y:y,z:z,t:t,h:h,obstacle:obstacle};break;}
   }
 
   return{deg:deg,power:Number(power.value),bearing:bearing,vx:vx,vy:vy,vz:vz,totalT:totalT,landX:landX,landZ:landZ,collision:collision};
@@ -1150,7 +1218,7 @@ function drawShipClassDetails(ship,theta,state){
   }
 }
 function drawBoardHealth(ship,theta,state,isEnemy){
-  if(isEnemy&&(ship.intelHits||0)<2&&state!=="sunk")return;
+  if(isEnemy&&shipIntelLevel(ship)<2&&state!=="sunk")return;
   var p=proj(ship.x,.8,ship.z,theta);
   var width=ship.code==="CV"?62:(ship.code==="CA"?52:44);
   var ratio=Math.max(0,ship.hp/ship.max);
@@ -1179,7 +1247,7 @@ function drawTargetBrackets(ship,theta){
 function drawWorldShip(ship,theta,isEnemy,isActive,index){
   var p=proj(ship.x,.8,ship.z,theta);
   var state=shipState(ship);
-  var hidden=isEnemy&&(ship.intelHits||0)<2&&state!=="sunk";
+  var hidden=isEnemy&&shipIntelLevel(ship)<2&&state!=="sunk";
   var factionColor=shipFrontColor(isEnemy);
   if(ship.justHit){
     ctx.save();ctx.fillStyle=pal.red;ctx.globalAlpha=.22+.14*Math.sin(performance.now()/70);ctx.beginPath();ctx.arc(p.x,p.y,46,0,Math.PI*2);ctx.fill();ctx.restore();
@@ -1243,7 +1311,8 @@ function drawBattlefieldFleets(theta){
   }
 }
 function drawTarget(theta){
-  if(!target)return;
+  var activeShip=activeEnemyShip(currentFront);
+  if(!target||!activeShip||shipIntelLevel(activeShip)<2)return;
   var p=proj(target.x,.34,target.z,theta);
   var outer=powerAimColor(),inner=angleAimColor();
   var powerT=clamp01((Number(power.value)-25)/75);
@@ -1278,6 +1347,38 @@ function drawHomeMarks(theta){
   });
 }
 
+function addImpactPulse(x,z,type,color){
+  impactPulses.push({x:x,z:z,type:type||"hit",color:color||theaterColor(currentFront),start:performance.now()});
+  if(impactPulses.length>10)impactPulses.shift();
+}
+function drawImpactPulses(theta,now){
+  impactPulses=impactPulses.filter(function(p){return now-p.start<1500;});
+  impactPulses.forEach(function(p){
+    var age=(now-p.start)/1500,cellX=Math.floor(Math.max(0,Math.min(99.9,p.x))/10)*10,cellZ=Math.floor(Math.max(0,Math.min(99.9,p.z))/10)*10;
+    ctx.save();ctx.globalAlpha=(1-age)*.16;
+    poly([[cellX,.09,cellZ],[cellX+10,.09,cellZ],[cellX+10,.09,cellZ+10],[cellX,.09,cellZ+10]],p.color,null,theta);
+    var sp=proj(p.x,.35,p.z,theta),r=12+age*30;
+    ctx.globalAlpha=(1-age)*.34;ctx.fillStyle=p.color;ctx.beginPath();ctx.ellipse(sp.x,sp.y,r,r*.55,0,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=(1-age)*.78;ctx.strokeStyle=p.color;ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(sp.x,sp.y,r+5,(r+5)*.55,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+  });
+}
+function terrainRecon(front){
+  var ship=activeEnemyShip(front);if(!ship)return null;
+  var before=shipIntelLevel(ship);
+  ship.reconHits=Math.min(2,(ship.reconHits||0)+1);
+  ship.revealed=shipIntelLevel(ship)>=2||ship.hp<=0;
+  if(front===currentFront)target=activeTarget(front);
+  renderFleets();
+  return{ship:ship,before:before,after:shipIntelLevel(ship)};
+}
+function damageObstacle(obstacle,x,z){
+  if(!obstacle||obstacle.hp<=0)return null;
+  obstacle.hp=Math.max(0,obstacle.hp-1);obstacle.justHitUntil=performance.now()+900;
+  var recon=terrainRecon(currentFront);
+  addImpactPulse(x,z,"terrain",pal.red);
+  return{obstacle:obstacle,recon:recon,destroyed:obstacle.hp<=0};
+}
+
 function drawHistory(theta){
   history.forEach(function(h){
     var p=proj(h.x,.3,h.z,theta);
@@ -1303,7 +1404,7 @@ function drawSalvoPlots(theta){
     var p=proj(x,.28,z,theta);
     ctx.save();ctx.strokeStyle=theaterColor("west");ctx.fillStyle=theaterColor("west");ctx.globalAlpha=.72;ctx.lineWidth=2.2;ctx.setLineDash([5,4]);
     ctx.beginPath();ctx.arc(p.x,p.y,18,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
-    ctx.font="800 12px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(index+1),p.x,p.y);ctx.restore();
+    ctx.font="800 12px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(index+1),p.x,p.y);ctx.font="800 9px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.fillText(gridCoordinate(x,z),p.x,p.y+27);ctx.restore();
   });
 }
 
@@ -1316,6 +1417,9 @@ function drawPreview(sol,theta){
   }
   ctx.stroke();ctx.restore();
   var retX=Math.max(0,Math.min(100,sol.landX));var retZ=Math.max(0,Math.min(100,sol.landZ));
+  var retP=proj(retX,.3,retZ,theta);
+  ctx.save();ctx.fillStyle=pal.ink;ctx.globalAlpha=.88;ctx.font="800 10px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";
+  ctx.fillText(gridCoordinate(retX,retZ),retP.x,retP.y+28);ctx.restore();
   line([gun.x,.12,gun.z],[retX,.12,retZ],sol.collision?pal.red:powerAimColor(),1.4,theta,[5,7]);
   if(sol.collision){
     drawCircleOnPlane(retX,retZ,6.2,pal.red,theta,true);
@@ -1359,12 +1463,29 @@ function drawShot(now,theta){
 
 function flash(text){
   callout.textContent=text;callout.classList.remove("show");void callout.offsetWidth;callout.classList.add("show");
+  var t=String(text).toUpperCase(),key=null;
+  if(t.indexOf("DIRECT HIT")>=0)key="directHit";
+  else if(t.indexOf("TARGET FIXED")>=0)key="targetFixed";
+  else if(t.indexOf("CONTACT")>=0)key="contact";
+  else if(t.indexOf("SALVO")>=0)key="salvo";
+  else if(t.indexOf("INCOMING")>=0)key="incoming";
+  else if(t.indexOf("RIDGE STRIKE")>=0)key="ridgeStrike";
+  else if(t.indexOf("SPLASH")>=0)key="splash";
+  else if(t.indexOf("SHOT AWAY")>=0)key="shotAway";
+  if(key)playVoiceCallout(key);
 }
 
 function recordShotResult(sol){
   var x;var kind;var z;var message="";
   if(sol.collision){
-    x=sol.collision.x;z=sol.collision.z;kind="ridge";message="RIDGE STRIKE";status.textContent="RIDGE STRIKE — raise the arc or change power.";flash("RIDGE STRIKE");sfxTerrain();
+    x=sol.collision.x;z=sol.collision.z;kind="ridge";message="RIDGE STRIKE";
+    var terrainDamage=damageObstacle(sol.collision.obstacle,x,z);
+    var reconText="";
+    if(terrainDamage&&terrainDamage.recon){
+      reconText=terrainDamage.recon.after>=2?" · TARGET LOCATION FIXED":" · CONTACT AREA TIGHTENED";
+    }
+    status.textContent=(terrainDamage&&terrainDamage.destroyed?"COVER DESTROYED":"STRUCTURE HIT")+reconText+".";
+    flash(terrainDamage&&terrainDamage.destroyed?"COVER DESTROYED":"RIDGE STRIKE");sfxTerrain();
   }else{
     x=sol.landX;z=sol.landZ;var missDistance=target?Math.hypot(x-target.x,z-target.z):999;
     if(target&&missDistance<=target.r){
@@ -1375,9 +1496,9 @@ function recordShotResult(sol){
         status.textContent="DIRECT HIT — "+intelText+struckShip.name+" "+stateAfter+".";
         message=damageResult.newlyTracked?"CONTACT TRACKED":(damageResult.newlyRevealed?"TARGET FIXED":"DIRECT HIT");
       }else{status.textContent="DIRECT HIT — enemy fleet damaged.";message="DIRECT HIT";}
-      flash(message);sfxHit();
+      flash(message);addImpactPulse(x,z,"hit",theaterColor(currentFront));sfxHit();
     }else{
-      kind="miss";status.textContent=x>100?"LONG — shot left the chart.":"SPLASH — correct from the mark.";flash(x>100?"LONG":"SPLASH");sfxSplash();
+      kind="miss";status.textContent=x>100?"LONG — shot left the chart.":"SPLASH — correct from the mark.";flash(x>100?"LONG":"SPLASH");addImpactPulse(x,z,"splash",pal.ink);sfxSplash();
     }
   }
   history.push({x:Math.max(0,Math.min(100,x)),z:Math.max(0,Math.min(100,z)),kind:kind==="hit"?"hit":"miss",angle:sol.deg,power:sol.power,bearing:sol.bearing});
@@ -1506,7 +1627,7 @@ function formatBearing(rad){
   var deg=Math.round(rad*180/Math.PI);if(Math.abs(deg)<1)return "0° CENTER";return Math.abs(deg)+"° "+(deg<0?"N":"S");
 }
 function updateReadout(){
-  var sol=solution();angleVal.textContent=sol.deg+"°";powerVal.textContent=sol.power+"%";bearingVal.textContent=formatBearing(sol.bearing);
+  var sol=solution();angleVal.textContent=sol.deg+"°";powerVal.textContent=sol.power+"%";bearingVal.textContent=gridCoordinate(sol.landX,sol.landZ)+" · "+formatBearing(sol.bearing);
   rangeVal.textContent=Math.round(Math.hypot(sol.landX-gun.x,sol.landZ-gun.z))+" units";pathVal.textContent=sol.collision?"BLOCKED":"CLEAR";pathVal.style.color=sol.collision?"var(--red)":"var(--ink)";
   var minClear=999;var samples=160;
   for(var i=1;i<=samples;i++){var t=sol.totalT*i/samples;var q=trajectoryPoint(sol,t);var terrainH=ridgeHeightAt(q.x,q.z);if(terrainH>0)minClear=Math.min(minClear,q.y-terrainH);}
@@ -1534,30 +1655,34 @@ function updateAimFeedbackUi(){
   if(mobilePowerVal)mobilePowerVal.style.color=powerAimColor();
 }
 function aimChanged(){
-  aimingUntil=performance.now()+1200;orbitLabel.textContent="Camera: orbit damped while aiming";clearTimeout(aimChanged.timer);
-  aimChanged.timer=setTimeout(function(){orbitLabel.textContent="Camera: slow orbit";},1250);updateReadout();
+  frozenAimTheta=cameraTheta;aimingUntil=performance.now()+1500;
+  var sol=solution();
+  directAimPoint={x:Math.max(1,Math.min(99,sol.landX)),z:Math.max(1,Math.min(99,sol.landZ))};
+  updateReadout();
+  orbitLabel.textContent="Aim "+gridCoordinate(directAimPoint.x,directAimPoint.z)+" · camera locked";
+  clearTimeout(aimChanged.timer);
+  aimChanged.timer=setTimeout(function(){if(!directAimActive)orbitLabel.textContent="Camera: slow orbit";},1550);
 }
 
 var reducedMotion=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 function frame(now){
-  // Visible, smooth orbit; damp during bearing adjustment without changing the cardinal theater heading.
-  var orbitScale=reducedMotion ? 0 : (now<aimingUntil ? .12 : 1);
   var facing=theaterOrientation[currentFront]||0;
-  var theta=facing+(-.08+Math.sin(now/4800)*.34*orbitScale);
+  var orbitTheta=facing+(-.08+Math.sin(now/4800)*.34*(reducedMotion?0:1));
+  var theta=(directAimActive||now<aimingUntil)?frozenAimTheta:orbitTheta;
+  if(!directAimActive&&now>=aimingUntil)frozenAimTheta=theta;
   cameraTheta=theta;
-  drawBoard(theta);drawRidge(theta);drawHistory(theta);drawHomeMarks(theta);drawBattlefieldFleets(theta);drawGun(theta);drawTarget(theta);drawSalvoPlots(theta);
+  drawBoard(theta);drawRidge(theta);drawHistory(theta);drawImpactPulses(theta,now);drawHomeMarks(theta);drawBattlefieldFleets(theta);drawGun(theta);drawTarget(theta);drawSalvoPlots(theta);
   if(!returningFire)drawPreview(solution(),theta);drawShot(now,theta);drawIncomingShot(now,theta);requestAnimationFrame(frame);
 }
-
 function shipState(ship){
   if(ship.hp<=0)return "sunk";var ratio=ship.hp/ship.max;if(ratio<=.34)return "critical";if(ratio<1)return "damaged";return "intact";
 }
 function shipMarkup(ship,isEnemy){
-  var state=shipState(ship);var hidden=isEnemy&&(ship.intelHits||0)<2&&state!=="sunk";var label=hidden?((ship.intelHits||0)>0?"×":"?"):ship.code;var pips="";
+  var state=shipState(ship);var hidden=isEnemy&&shipIntelLevel(ship)<2&&state!=="sunk";var label=hidden?(shipIntelLevel(ship)>0?"×":"?"):ship.code;var pips="";
   for(var i=0;i<ship.max;i++)pips+='<i class="'+(i<ship.hp?"live":"lost")+'"></i>';
   var classes="shipAvatar "+state+(hidden?" contact":" revealed")+(ship.justHit?" justHit":"");
   var fx=state==="critical"?'<span class="smoke">••</span>':(state==="sunk"?'<span class="wreck">×</span>':(state==="damaged"?'<span class="scar">／</span>':""));
-  return '<span class="'+classes+'" title="'+(hidden?((ship.intelHits||0)>0?"Damaged contact · location tightening":"Unknown contact"):ship.name+" · "+state)+'"><b>'+label+'</b><span class="hull">'+fx+'</span><span class="pips">'+pips+'</span><span class="stateText">'+(hidden?((ship.intelHits||0)>0?"TRACKED":"CONTACT"):state.toUpperCase())+'</span></span>';
+  return '<span class="'+classes+'" title="'+(hidden?(shipIntelLevel(ship)>0?"Damaged contact · location tightening":"Unknown contact"):ship.name+" · "+state)+'"><b>'+label+'</b><span class="hull">'+fx+'</span><span class="pips">'+pips+'</span><span class="stateText">'+(hidden?(shipIntelLevel(ship)>0?"TRACKED":"CONTACT"):state.toUpperCase())+'</span></span>';
 }
 function renderFleets(){
   ["north","east","south"].forEach(function(front){var host=document.getElementById(front+"Fleet");host.innerHTML=profiles[front].fleet.map(function(ship){return shipMarkup(ship,true);}).join("");});
@@ -1574,7 +1699,7 @@ function updateFrontIntel(){
 }
 function switchFront(front){
   if(!profiles[front]||shot||returningFire||salvoActive)return;
-  currentFront=front;bearing=0;target=activeTarget(front);history=profiles[front].history;
+  currentFront=front;bearing=0;directAimPoint=null;target=activeTarget(front);history=profiles[front].history;
   document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){btn.classList.toggle("active",btn.getAttribute("data-front")===front);});
   document.querySelector(".hud > div:first-child").childNodes[0].nodeValue=profiles[front].title;
   terrainLabel.textContent=profiles[front].label;terrainNote.textContent=profiles[front].note;
@@ -1587,39 +1712,43 @@ function canvasToWorld(clientX,clientY){
   var rect=canvas.getBoundingClientRect();var sx=clientX-rect.left;var sy=clientY-rect.top;var rx=(sx-cssW/2)/projectionXScale();var rz=(sy-projectionBaseY())/projectionZScale();
   var ct=Math.cos(cameraTheta);var st=Math.sin(cameraTheta);var dx=rx*ct+rz*st;var dz=-rx*st+rz*ct;return{x:dx+50,z:dz+50};
 }
-function setBearingFromPointer(clientX,clientY){
+function aimAtWorldPoint(world){
   if(shot||returningFire)return;
-  var w=canvasToWorld(clientX,clientY);var raw=Math.atan2(w.z-gun.z,w.x-gun.x);var limit=30*Math.PI/180;bearing=Math.max(-limit,Math.min(limit,raw));
-  aimingUntil=performance.now()+1200;orbitLabel.textContent="Camera: bearing lock";updateReadout();
+  var x=Math.max(1,Math.min(99,world.x)),z=Math.max(1,Math.min(99,world.z));
+  var dx=x-gun.x,dz=z-gun.z,range=Math.max(1,Math.hypot(dx,dz));
+  bearing=Math.atan2(dz,dx);
+  var limit=30*Math.PI/180;bearing=Math.max(-limit,Math.min(limit,bearing));
+  var a=Number(angle.value)*Math.PI/180,sin2=Math.max(.12,Math.sin(2*a));
+  var neededV=Math.sqrt(range*gravity/sin2);
+  var neededPower=Math.round((neededV-50)/.45);
+  power.value=Math.max(25,Math.min(100,neededPower));
+  directAimPoint={x:x,z:z};
+  aimingUntil=performance.now()+1800;
+  orbitLabel.textContent="Aim "+gridCoordinate(x,z)+" · camera locked";
+  updateReadout();
 }
-var bearingPointerStart=null;
+function aimFromPointer(clientX,clientY){aimAtWorldPoint(canvasToWorld(clientX,clientY));}
+
 canvas.addEventListener("pointerdown",function(e){
   if(shot||returningFire)return;
-  bearingPointerStart={x:e.clientX,y:e.clientY,id:e.pointerId,committed:e.pointerType==="mouse"};
-  if(bearingPointerStart.committed){
-    draggingBearing=true;canvas.setPointerCapture(e.pointerId);setBearingFromPointer(e.clientX,e.clientY);
-  }
+  directAimActive=true;directAimPointer=e.pointerId;frozenAimTheta=cameraTheta;
+  try{canvas.setPointerCapture(e.pointerId);}catch(err){}
+  if(e.cancelable)e.preventDefault();
+  aimFromPointer(e.clientX,e.clientY);
 });
 canvas.addEventListener("pointermove",function(e){
-  if(!bearingPointerStart||bearingPointerStart.id!==e.pointerId)return;
-  if(!bearingPointerStart.committed){
-    var dx=e.clientX-bearingPointerStart.x,dy=e.clientY-bearingPointerStart.y;
-    if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>8)return;
-    if(Math.abs(dx)>10){
-      bearingPointerStart.committed=true;draggingBearing=true;
-      try{canvas.setPointerCapture(e.pointerId);}catch(err){}
-      setBearingFromPointer(e.clientX,e.clientY);
-    }
-    return;
-  }
-  if(draggingBearing)setBearingFromPointer(e.clientX,e.clientY);
+  if(!directAimActive||directAimPointer!==e.pointerId)return;
+  if(e.cancelable)e.preventDefault();
+  aimFromPointer(e.clientX,e.clientY);
 });
-canvas.addEventListener("pointerup",function(e){
-  draggingBearing=false;bearingPointerStart=null;
-  try{canvas.releasePointerCapture(e.pointerId);}catch(err){}
-  setTimeout(function(){if(!shot&&!returningFire)orbitLabel.textContent="Camera: slow orbit";},450);
-});
-canvas.addEventListener("pointercancel",function(){draggingBearing=false;bearingPointerStart=null;});
+function releaseDirectAim(e){
+  if(!directAimActive)return;
+  directAimActive=false;directAimPointer=null;aimingUntil=performance.now()+1300;
+  try{if(e)canvas.releasePointerCapture(e.pointerId);}catch(err){}
+  setTimeout(function(){if(!shot&&!returningFire&&!directAimActive)orbitLabel.textContent="Camera: slow orbit";},1350);
+}
+canvas.addEventListener("pointerup",releaseDirectAim);
+canvas.addEventListener("pointercancel",releaseDirectAim);
 
 angle.addEventListener("input",aimChanged);power.addEventListener("input",aimChanged);
 fire.addEventListener("pointerdown",unlockAudio,{passive:true});
