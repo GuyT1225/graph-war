@@ -1066,7 +1066,7 @@ function drawRidge(theta){
       ctx.restore();
       continue;
     }
-    ctx.save();ctx.globalAlpha=b.hp<b.maxHp?.78:1;
+    ctx.save();ctx.globalAlpha=b.hp<b.maxHp ? .78 : 1;
     poly([[b.x0,0,b.z0],[b.x1,0,b.z0],[b.x1,h,b.z0],[b.x0,h,b.z0]],pal.side,pal.ink,theta);
     poly([[b.x1,0,b.z0],[b.x1,0,b.z1],[b.x1,h,b.z1],[b.x1,h,b.z0]],pal.side,pal.ink,theta);
     poly([[b.x0,h,b.z0],[b.x1,h,b.z0],[b.x1,h,b.z1],[b.x0,h,b.z1]],pal.top,pal.ink,theta);
@@ -1311,7 +1311,8 @@ function drawBattlefieldFleets(theta){
   }
 }
 function drawTarget(theta){
-  if(!target)return;
+  var activeShip=activeEnemyShip(currentFront);
+  if(!target||!activeShip||shipIntelLevel(activeShip)<2)return;
   var p=proj(target.x,.34,target.z,theta);
   var outer=powerAimColor(),inner=angleAimColor();
   var powerT=clamp01((Number(power.value)-25)/75);
@@ -1626,7 +1627,7 @@ function formatBearing(rad){
   var deg=Math.round(rad*180/Math.PI);if(Math.abs(deg)<1)return "0° CENTER";return Math.abs(deg)+"° "+(deg<0?"N":"S");
 }
 function updateReadout(){
-  var sol=solution();angleVal.textContent=sol.deg+"°";powerVal.textContent=sol.power+"%";bearingVal.textContent=formatBearing(sol.bearing);
+  var sol=solution();angleVal.textContent=sol.deg+"°";powerVal.textContent=sol.power+"%";bearingVal.textContent=gridCoordinate(sol.landX,sol.landZ)+" · "+formatBearing(sol.bearing);
   rangeVal.textContent=Math.round(Math.hypot(sol.landX-gun.x,sol.landZ-gun.z))+" units";pathVal.textContent=sol.collision?"BLOCKED":"CLEAR";pathVal.style.color=sol.collision?"var(--red)":"var(--ink)";
   var minClear=999;var samples=160;
   for(var i=1;i<=samples;i++){var t=sol.totalT*i/samples;var q=trajectoryPoint(sol,t);var terrainH=ridgeHeightAt(q.x,q.z);if(terrainH>0)minClear=Math.min(minClear,q.y-terrainH);}
@@ -1655,9 +1656,10 @@ function updateAimFeedbackUi(){
 }
 function aimChanged(){
   frozenAimTheta=cameraTheta;aimingUntil=performance.now()+1500;
-  if(directAimPoint)aimAtWorldPoint(directAimPoint);
-  else updateReadout();
-  orbitLabel.textContent=directAimPoint?("Aim "+gridCoordinate(directAimPoint.x,directAimPoint.z)+" · camera locked"):"Camera: aim locked";
+  var sol=solution();
+  directAimPoint={x:Math.max(1,Math.min(99,sol.landX)),z:Math.max(1,Math.min(99,sol.landZ))};
+  updateReadout();
+  orbitLabel.textContent="Aim "+gridCoordinate(directAimPoint.x,directAimPoint.z)+" · camera locked";
   clearTimeout(aimChanged.timer);
   aimChanged.timer=setTimeout(function(){if(!directAimActive)orbitLabel.textContent="Camera: slow orbit";},1550);
 }
@@ -1697,7 +1699,7 @@ function updateFrontIntel(){
 }
 function switchFront(front){
   if(!profiles[front]||shot||returningFire||salvoActive)return;
-  currentFront=front;bearing=0;target=activeTarget(front);history=profiles[front].history;
+  currentFront=front;bearing=0;directAimPoint=null;target=activeTarget(front);history=profiles[front].history;
   document.querySelectorAll(".frontCard[data-front]").forEach(function(btn){btn.classList.toggle("active",btn.getAttribute("data-front")===front);});
   document.querySelector(".hud > div:first-child").childNodes[0].nodeValue=profiles[front].title;
   terrainLabel.textContent=profiles[front].label;terrainNote.textContent=profiles[front].note;
