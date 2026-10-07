@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.12 — Mobile Layout & Scroll</title>
+<title>Graph War V0.10.13 — Battlefield Controls</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -409,12 +409,69 @@ body.warroom .howTo{background:rgba(255,248,220,.18)}
 }
 
 </style>
+<style>
+
+.mobileBattleControls{display:none}
+@media(max-width:700px){
+  .top{margin-bottom:5px}
+  .layout{display:block}
+  .stage{min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  #scene{height:500px;flex:0 0 500px;order:1}
+  .hud{z-index:5}.callout{z-index:6}
+  .mobileBattleControls{
+    display:grid;position:absolute;z-index:7;left:8px;right:8px;bottom:58px;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) 86px;
+    gap:7px;align-items:end;padding:8px 8px 7px;
+    background:color-mix(in srgb,var(--panel) 78%,transparent);
+    border:1px solid color-mix(in srgb,var(--line) 80%,transparent);
+    border-radius:7px;backdrop-filter:blur(5px);box-shadow:0 3px 10px rgba(0,0,0,.12)
+  }
+  .mbcSlider{min-width:0}
+  .mbcSlider label{margin:0 0 1px;font-size:9px;line-height:1;letter-spacing:.08em}
+  .mbcSlider label strong{color:var(--ink);font-size:11px}
+  .mbcSlider input[type=range]{width:100%;height:30px;margin:0}
+  .mobileFire{
+    min-height:48px;border:1px solid color-mix(in srgb,var(--ink) 80%,black);
+    border-radius:6px;background:var(--ink);color:var(--panel);
+    font-family:var(--display);font-size:19px;font-weight:800;letter-spacing:.08em;cursor:pointer
+  }
+  .mobileFire:disabled{opacity:.45}
+  .stage>.frontbar.commandCompass{
+    order:2;position:relative;inset:auto;width:100%;height:auto;margin:0;padding:4px;
+    grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:auto;
+    grid-template-areas:"north east south west";gap:4px;border-top:1px solid var(--line)
+  }
+  .stage>.frontbar.commandCompass:before,.stage .commandCompass .compassBubble{display:none}
+  .stage .commandCompass .sectorPlaque{min-height:45px;padding:4px 2px;box-shadow:none}
+  .stage .commandCompass .sectorPlaque em,.stage .commandCompass .sectorPlaque small,.stage .commandCompass .fleetStrip{display:none!important}
+  .panel{margin-top:7px}
+  .panelHead{padding:9px 11px 8px}
+  .panelBody{display:block;padding:9px 10px 12px}
+  .panelBody>.control,.panelBody>.fire{display:none}
+  .readout{margin:0 0 8px;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  .status{margin:0 0 8px;min-height:0;padding:9px 10px;font-size:12px}
+  .audioControls,.howTo{margin-top:8px}
+  .note,.legend{display:none}
+}
+@media(max-width:430px){
+  #scene{height:470px;flex-basis:470px}
+  .mobileBattleControls{
+    left:5px;right:5px;bottom:54px;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) 74px;
+    gap:5px;padding:6px
+  }
+  .mobileFire{min-height:45px;font-size:17px}
+  .mbcSlider label{font-size:8px}.mbcSlider label strong{font-size:10px}
+  .readout{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+</style>
 </head>
 <body>
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.12 MOBILE LAYOUT</span></h1>
+      <h1>GRAPH WAR <span class="version">V0.10.13 BATTLEFIELD CONTROLS</span></h1>
       <div class="sub">Mobile-ready tactical play with clearer instructions and fairer return fire: same battlefield, less punishment, easier first-time pickup.</div>
     </div>
     <div class="theme">
@@ -454,6 +511,17 @@ body.warroom .howTo{background:rgba(255,248,220,.18)}
         <div style="text-align:right">West Battery<br><span id="volleyLabel">Volley 1</span></div>
       </div>
       <div id="callout" class="callout">RIDGE STRIKE</div>
+      <div class="mobileBattleControls" aria-label="Mobile firing controls">
+        <div class="mbcSlider">
+          <label for="mobileAngle"><span>ANGLE</span><strong id="mobileAngleVal">45°</strong></label>
+          <input id="mobileAngle" type="range" min="18" max="76" value="45">
+        </div>
+        <div class="mbcSlider">
+          <label for="mobilePower"><span>POWER</span><strong id="mobilePowerVal">65%</strong></label>
+          <input id="mobilePower" type="range" min="25" max="100" value="65">
+        </div>
+        <button id="mobileFire" class="mobileFire" type="button">FIRE</button>
+      </div>
     </section>
 
     <aside class="panel">
@@ -541,6 +609,11 @@ var terrainNote=document.getElementById("terrainNote");
 var muteAudio=document.getElementById("muteAudio");
 var audioVolume=document.getElementById("audioVolume");
 var audioVolumeVal=document.getElementById("audioVolumeVal");
+var mobileAngle=document.getElementById("mobileAngle");
+var mobilePower=document.getElementById("mobilePower");
+var mobileAngleVal=document.getElementById("mobileAngleVal");
+var mobilePowerVal=document.getElementById("mobilePowerVal");
+var mobileFire=document.getElementById("mobileFire");
 var audioCtx=null;
 var audioMuted=false;
 var shellWhooshTimer=0;
@@ -1115,7 +1188,7 @@ function fireShot(){
   unlockAudio();
   sfxCannon();
   var sol=solution();shot={sol:sol,start:performance.now(),duration:1450,endT:sol.collision?sol.collision.t:sol.totalT,done:false};
-  fire.disabled=true;status.textContent="SHOT AWAY — watch the ridge clearance.";flash("SHOT AWAY");
+  fire.disabled=true;if(mobileFire)mobileFire.disabled=true;status.textContent="SHOT AWAY — watch the ridge clearance.";flash("SHOT AWAY");
 }
 
 function fleetStrength(front){
@@ -1147,7 +1220,7 @@ function incomingSpec(front,index){
   return{front:front,label:s.label,hit:hit,targetShip:targetShip,start:{x:96,y:2,z:s.z},control:{x:54,y:s.peak,z:(s.z+endZ)/2},end:{x:endX,y:.4,z:endZ},startTime:0,duration:s.duration,done:false,index:index};
 }
 function beginReturnVolley(){
-  returningFire=true;fire.disabled=true;var order=[];
+  returningFire=true;fire.disabled=true;if(mobileFire)mobileFire.disabled=true;var order=[];
   if(!frontEliminated(lastAttackedFront))order.push(lastAttackedFront);
   if(Math.random()<.12){
     var extras=["north","east","south"].filter(function(front){return front!==lastAttackedFront&&!frontEliminated(front);});
@@ -1164,7 +1237,7 @@ function runIncomingFront(order,index){
   if(index>=order.length){
     incomingShot=null;returningFire=false;volley++;volleyLabel.textContent="Volley "+volley;orbitLabel.textContent="Camera: slow orbit";updateFrontIntel();
     var aliveWest=westFleet.filter(function(ship){return ship.hp>0;}).length;
-    status.textContent=aliveWest<3?"RETURN FIRE RESOLVED — West fleet status updated.":"RETURN FIRE RESOLVED — West is still holding.";fire.disabled=false;return;
+    status.textContent=aliveWest<3?"RETURN FIRE RESOLVED — West fleet status updated.":"RETURN FIRE RESOLVED — West is still holding.";fire.disabled=false;if(mobileFire)mobileFire.disabled=false;return;
   }
   incomingShot=incomingSpec(order[index],index);incomingShot.order=order;incomingShot.startTime=performance.now();status.textContent=order[index].toUpperCase()+" FRONT — incoming round.";
 }
@@ -1184,6 +1257,21 @@ function updateReadout(){
   var minClear=999;var samples=160;
   for(var i=1;i<=samples;i++){var t=sol.totalT*i/samples;var q=trajectoryPoint(sol,t);var terrainH=ridgeHeightAt(q.x,q.z);if(terrainH>0)minClear=Math.min(minClear,q.y-terrainH);}
   clearanceVal.textContent=minClear===999?"OPEN":Math.round(minClear)+" units";
+  syncMobileControls();
+}
+
+function syncMobileControls(){
+  if(!mobileAngle)return;
+  mobileAngle.value=angle.value;
+  mobilePower.value=power.value;
+  mobileAngleVal.textContent=angle.value+"°";
+  mobilePowerVal.textContent=power.value+"%";
+}
+function syncDesktopFromMobile(){
+  angle.value=mobileAngle.value;
+  power.value=mobilePower.value;
+  aimChanged();
+  syncMobileControls();
 }
 
 function aimChanged(){
@@ -1275,6 +1363,9 @@ canvas.addEventListener("pointerup",function(e){
 canvas.addEventListener("pointercancel",function(){draggingBearing=false;bearingPointerStart=null;});
 
 angle.addEventListener("input",aimChanged);power.addEventListener("input",aimChanged);fire.addEventListener("click",fireShot);
+mobileAngle.addEventListener("input",syncDesktopFromMobile);
+mobilePower.addEventListener("input",syncDesktopFromMobile);
+mobileFire.addEventListener("click",fireShot);
 muteAudio.addEventListener("click",function(){unlockAudio();audioMuted=!audioMuted;updateAudioUi();if(!audioMuted)tone(440,.09,.10,"sine",0);});
 audioVolume.addEventListener("input",updateAudioUi);
 audioVolume.addEventListener("change",function(){unlockAudio();if(!audioMuted)tone(520,.08,.08,"sine",0);});
