@@ -650,7 +650,16 @@ function ensureAudio(){
 }
 function unlockAudio(){
   var ac=ensureAudio();
-  if(ac&&ac.state==="suspended")ac.resume();
+  if(!ac)return Promise.resolve(null);
+  if(ac.state==="suspended"){
+    return ac.resume().then(function(){return ac;}).catch(function(){return ac;});
+  }
+  return Promise.resolve(ac);
+}
+function playAfterAudioUnlock(fn){
+  unlockAudio().then(function(ac){
+    if(ac&&ac.state==="running"&&!audioMuted)fn();
+  });
 }
 function audioGain(level){
   var v=audioMuted?0:Number(audioVolume.value)/100;
@@ -1219,8 +1228,7 @@ function resolveShot(sol){
 
 function fireShot(){
   if(shot||returningFire)return;
-  unlockAudio();
-  sfxCannon();
+  playAfterAudioUnlock(sfxCannon);
   var sol=solution();shot={sol:sol,start:performance.now(),duration:1450,endT:sol.collision?sol.collision.t:sol.totalT,done:false};
   fire.disabled=true;if(mobileFire)mobileFire.disabled=true;status.textContent="SHOT AWAY — watch the ridge clearance.";flash("SHOT AWAY");
 }
@@ -1396,13 +1404,17 @@ canvas.addEventListener("pointerup",function(e){
 });
 canvas.addEventListener("pointercancel",function(){draggingBearing=false;bearingPointerStart=null;});
 
-angle.addEventListener("input",aimChanged);power.addEventListener("input",aimChanged);fire.addEventListener("click",fireShot);
+angle.addEventListener("input",aimChanged);power.addEventListener("input",aimChanged);
+fire.addEventListener("pointerdown",unlockAudio,{passive:true});
+fire.addEventListener("click",fireShot);
 mobileAngle.addEventListener("input",syncDesktopFromMobile);
 mobilePower.addEventListener("input",syncDesktopFromMobile);
+mobileFire.addEventListener("pointerdown",unlockAudio,{passive:true});
+mobileFire.addEventListener("touchstart",unlockAudio,{passive:true});
 mobileFire.addEventListener("click",fireShot);
-muteAudio.addEventListener("click",function(){unlockAudio();audioMuted=!audioMuted;updateAudioUi();if(!audioMuted)tone(440,.09,.10,"sine",0);});
+muteAudio.addEventListener("click",function(){audioMuted=!audioMuted;updateAudioUi();if(!audioMuted)playAfterAudioUnlock(function(){tone(440,.09,.10,"sine",0);});});
 audioVolume.addEventListener("input",updateAudioUi);
-audioVolume.addEventListener("change",function(){unlockAudio();if(!audioMuted)tone(520,.08,.08,"sine",0);});
+audioVolume.addEventListener("change",function(){if(!audioMuted)playAfterAudioUnlock(function(){tone(520,.08,.08,"sine",0);});});
 
 theme.addEventListener("change",function(){document.body.classList.remove("blueprint","warroom");if(this.value!=="notebook")document.body.classList.add(this.value);pal=palettes[this.value];});
 
