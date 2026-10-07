@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Graph War V0.10.13 — Battlefield Controls</title>
+<title>Graph War V0.10.14 — Arcade Readability & Theater Identity</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700&family=Rajdhani:wght@600;700&display=swap');
 :root{
@@ -466,13 +466,35 @@ body.warroom .howTo{background:rgba(255,248,220,.18)}
 }
 
 </style>
+<style>
+
+/* V0.10.14 theater identity */
+.frontCard[data-front="north"]{--front-accent:#43a8c7}
+.frontCard[data-front="east"]{--front-accent:#d69b36}
+.frontCard[data-front="south"]{--front-accent:#d8653f}
+.frontCard.home{--front-accent:#668f4b}
+.frontCard[data-front],.frontCard.home{border-color:color-mix(in srgb,var(--front-accent) 58%,var(--line))}
+.frontCard[data-front] .dir,.frontCard.home .dir{color:var(--front-accent)}
+.frontCard[data-front].active{
+  border-color:var(--front-accent)!important;
+  box-shadow:inset 0 -3px 0 var(--front-accent)!important;
+}
+.frontCard[data-front].active .dir{color:var(--front-accent)}
+@media(max-width:700px){
+  .stage .commandCompass .sectorPlaque.active{
+    border-color:var(--front-accent)!important;
+    box-shadow:inset 0 -4px 0 var(--front-accent)!important;
+  }
+}
+
+</style>
 </head>
 <body>
 <main>
   <div class="top">
     <div>
-      <h1>GRAPH WAR <span class="version">V0.10.13 BATTLEFIELD CONTROLS</span></h1>
-      <div class="sub">Mobile-ready tactical play with clearer instructions and fairer return fire: same battlefield, less punishment, easier first-time pickup.</div>
+      <h1>GRAPH WAR <span class="version">V0.10.14 THEATER IDENTITY</span></h1>
+      <div class="sub">Distinct theater colors, stronger arcade-scale targeting, larger projectiles, and cleaner battlefield hierarchy.</div>
     </div>
     <div class="theme">
       <span>Theme</span>
@@ -788,6 +810,16 @@ var palettes={
   warroom:{bg:"#ddd4b8",board:"#eee6c9",grid:"rgba(42,72,43,.30)",ink:"#172919",red:"#8f2f2a",top:"#a7a17c",side:"#74755a",shadow:"rgba(28,34,25,.24)"}
 };
 var pal=palettes.notebook;
+var theaterColors={
+  north:{main:"#43a8c7",soft:"rgba(67,168,199,.18)",dark:"#246b82"},
+  east:{main:"#d69b36",soft:"rgba(214,155,54,.18)",dark:"#8b621e"},
+  south:{main:"#d8653f",soft:"rgba(216,101,63,.18)",dark:"#914126"},
+  west:{main:"#668f4b",soft:"rgba(102,143,75,.18)",dark:"#3e5e2d"}
+};
+function theaterColor(front){return (theaterColors[front]||theaterColors.west).main;}
+function theaterSoft(front){return (theaterColors[front]||theaterColors.west).soft;}
+function shipFrontColor(isEnemy){return theaterColor(isEnemy?currentFront:"west");}
+
 
 function resize(){
   var rect=canvas.getBoundingClientRect();
@@ -945,19 +977,19 @@ function drawWake(ship,theta,state){
   [-1,1].forEach(function(side){
     var offset=side*sz.w*.28;
     var ox=-Math.sin(h)*offset,oz=Math.cos(h)*offset;
-    line([bx+ox,.13,bz+oz],[bx-Math.cos(h)*11+ox,.13,bz-Math.sin(h)*11+oz],pal.ink,1.6,theta,[4,5]);
+    line([bx+ox,.13,bz+oz],[bx-Math.cos(h)*11+ox,.13,bz-Math.sin(h)*11+oz],shipFrontColor(ship!==undefined&&profiles[currentFront].fleet.indexOf(ship)!==-1),2.0,theta,[4,5]);
   });
 }
 function drawContactZone(ship,theta){
   var p=proj(ship.x,.3,ship.z,theta);
   ctx.save();
-  ctx.strokeStyle=pal.ink;ctx.lineWidth=2.4;ctx.globalAlpha=.65;ctx.setLineDash([7,6]);
+  var contactColor=theaterColor(currentFront);ctx.strokeStyle=contactColor;ctx.lineWidth=3;ctx.globalAlpha=.72;ctx.setLineDash([8,6]);
   ctx.beginPath();ctx.ellipse(p.x,p.y,43,19,0,0,Math.PI*2);ctx.stroke();
-  ctx.setLineDash([]);ctx.globalAlpha=.12;ctx.fillStyle=pal.ink;
+  ctx.setLineDash([]);ctx.globalAlpha=.12;ctx.fillStyle=contactColor;
   ctx.beginPath();ctx.ellipse(p.x,p.y,39,15,0,0,Math.PI*2);ctx.fill();
   ctx.globalAlpha=.36;ctx.beginPath();ctx.arc(p.x,p.y,31,Math.PI*.15,Math.PI*.85);ctx.stroke();
   ctx.beginPath();ctx.arc(p.x,p.y,25,Math.PI*1.15,Math.PI*1.85);ctx.stroke();
-  ctx.globalAlpha=.82;ctx.font="800 10px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";
+  ctx.globalAlpha=.88;ctx.fillStyle=contactColor;ctx.font="800 10px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";
   ctx.fillText("UNKNOWN CONTACT",p.x,p.y-25);
   ctx.font="800 22px "+getComputedStyle(document.body).getPropertyValue("--display");ctx.fillText("?",p.x,p.y+7);
   ctx.restore();
@@ -1002,7 +1034,7 @@ function drawBoardHealth(ship,theta,state,isEnemy){
   var ratio=Math.max(0,ship.hp/ship.max);
   ctx.save();
   ctx.fillStyle="rgba(0,0,0,.18)";ctx.fillRect(p.x-width/2,p.y+24,width,5);
-  ctx.fillStyle=state==="critical"||state==="sunk"?pal.red:(state==="damaged"?"#c98238":pal.ink);
+  ctx.fillStyle=state==="critical"||state==="sunk"?pal.red:(state==="damaged"?"#c98238":shipFrontColor(isEnemy));
   ctx.fillRect(p.x-width/2,p.y+24,width*ratio,5);
   ctx.strokeStyle=pal.ink;ctx.globalAlpha=.55;ctx.strokeRect(p.x-width/2,p.y+24,width,5);
   ctx.font="800 9px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";ctx.globalAlpha=.8;ctx.fillStyle=pal.ink;
@@ -1011,19 +1043,21 @@ function drawBoardHealth(ship,theta,state,isEnemy){
 }
 function drawTargetBrackets(ship,theta){
   if(!ship||ship.hp<=0)return;
-  var p=proj(ship.x,.8,ship.z,theta),r=36;
-  ctx.save();ctx.strokeStyle=pal.red;ctx.lineWidth=2.5;ctx.globalAlpha=.82;
+  var p=proj(ship.x,.8,ship.z,theta),r=43,color=theaterColor(currentFront);
+  ctx.save();ctx.strokeStyle=color;ctx.lineWidth=3.5;ctx.globalAlpha=.92;
   [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(function(s){
-    var x=p.x+s[0]*r,y=p.y+s[1]*22;
-    ctx.beginPath();ctx.moveTo(x,y+s[1]*10);ctx.lineTo(x,y);ctx.lineTo(x+s[0]*10,y);ctx.stroke();
+    var x=p.x+s[0]*r,y=p.y+s[1]*27;
+    ctx.beginPath();ctx.moveTo(x,y+s[1]*13);ctx.lineTo(x,y);ctx.lineTo(x+s[0]*13,y);ctx.stroke();
   });
-  ctx.font="800 9px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";ctx.fillStyle=pal.red;ctx.fillText("ACTIVE TARGET",p.x,p.y-32);
+  ctx.setLineDash([5,5]);ctx.globalAlpha=.55;ctx.beginPath();ctx.arc(p.x,p.y,34,0,Math.PI*2);ctx.stroke();
+  ctx.setLineDash([]);ctx.font="800 10px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";ctx.fillStyle=color;ctx.globalAlpha=1;ctx.fillText("ACTIVE TARGET",p.x,p.y-39);
   ctx.restore();
 }
 function drawWorldShip(ship,theta,isEnemy){
   var p=proj(ship.x,.8,ship.z,theta);
   var state=shipState(ship);
   var hidden=isEnemy&&!ship.revealed&&state==="intact";
+  var factionColor=shipFrontColor(isEnemy);
   if(ship.justHit){
     ctx.save();ctx.fillStyle=pal.red;ctx.globalAlpha=.22+.14*Math.sin(performance.now()/70);ctx.beginPath();ctx.arc(p.x,p.y,46,0,Math.PI*2);ctx.fill();ctx.restore();
   }
@@ -1035,8 +1069,8 @@ function drawWorldShip(ship,theta,isEnemy){
   var shadow=proj(ship.x,.15,ship.z,theta);
   ctx.save();ctx.fillStyle=pal.shadow;ctx.globalAlpha=state==="sunk" ? .18 : .34;ctx.beginPath();ctx.ellipse(shadow.x+6,shadow.y+7,sz.len*2.65,Math.max(7,sz.w*1.55),0,0,Math.PI*2);ctx.fill();ctx.restore();
 
-  var fill=state==="sunk"?"rgba(90,95,90,.34)":(state==="critical"?pal.red:(state==="damaged"?"#b66c32":pal.ink));
-  ctx.save();ctx.globalAlpha=state==="sunk" ? .55 : .98;poly(shipHullPoints(ship,sz),fill,pal.ink,theta);ctx.restore();
+  var fill=state==="sunk"?"rgba(90,95,90,.34)":(state==="critical"?pal.red:(state==="damaged"?"#b66c32":factionColor));
+  ctx.save();ctx.globalAlpha=state==="sunk" ? .55 : .98;poly(shipHullPoints(ship,sz),fill,state==="sunk"?pal.ink:factionColor,theta);ctx.restore();
 
   var h=ship.heading||0;
   var superLen=ship.code==="CV"?8:(ship.code==="CA"?5.8:4.2);
@@ -1049,7 +1083,7 @@ function drawWorldShip(ship,theta,isEnemy){
     [cx+superLen/2*ch+superW/2*sh,1.25,cz+superLen/2*sh-superW/2*ch],
     [cx+superLen/2*ch-superW/2*sh,1.25,cz+superLen/2*sh+superW/2*ch],
     [cx-superLen/2*ch-superW/2*sh,1.25,cz-superLen/2*sh+superW/2*ch]
-  ],fill,pal.ink,theta);
+  ],fill,state==="sunk"?pal.ink:factionColor,theta);
 
   drawShipClassDetails(ship,theta,state);
   drawShipImpactHistory(ship,theta,state);
@@ -1067,7 +1101,7 @@ function drawWorldShip(ship,theta,isEnemy){
     ctx.save();ctx.strokeStyle=pal.red;ctx.lineWidth=5;ctx.globalAlpha=.82;ctx.beginPath();ctx.moveTo(p.x-28,p.y-20);ctx.lineTo(p.x+28,p.y+20);ctx.stroke();ctx.restore();
   }
 
-  ctx.save();ctx.fillStyle=state==="sunk"?pal.red:pal.ink;ctx.font="800 13px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";
+  ctx.save();ctx.fillStyle=state==="sunk"?pal.red:factionColor;ctx.font="800 14px "+getComputedStyle(document.body).getPropertyValue("--ui");ctx.textAlign="center";
   ctx.fillText(ship.code+" · "+sz.label,p.x,p.y-24);ctx.restore();
   drawBoardHealth(ship,theta,state,isEnemy);
 }
@@ -1080,8 +1114,8 @@ function drawBattlefieldFleets(theta){
 function drawTarget(theta){
   if(!target)return;
   var active=activeEnemyShip(currentFront);
-  var color=active&&active.revealed?pal.red:"rgba(160,60,50,.34)";
-  drawCircleOnPlane(target.x,target.z,target.r,color,theta,true);
+  var color=theaterColor(currentFront);
+  drawCircleOnPlane(target.x,target.z,target.r+1.8,color,theta,true);
 }
 function drawCompass(theta){
   var cx=70,cy=cssH-64;
@@ -1097,7 +1131,7 @@ function drawCompass(theta){
 function drawHomeMarks(theta){
   homeMarks.forEach(function(h){
     var p=proj(h.x,.35,h.z,theta);
-    ctx.save();ctx.strokeStyle=h.hit?pal.red:pal.ink;ctx.globalAlpha=h.hit ? .78 : .46;ctx.lineWidth=h.hit?3:2;ctx.beginPath();
+    ctx.save();ctx.strokeStyle=h.hit?theaterColor(h.front):theaterColor(h.front);ctx.globalAlpha=h.hit ? .82 : .48;ctx.lineWidth=h.hit?3.5:2.2;ctx.beginPath();
     if(h.hit){ctx.moveTo(p.x-10,p.y-10);ctx.lineTo(p.x+10,p.y+10);ctx.moveTo(p.x+10,p.y-10);ctx.lineTo(p.x-10,p.y+10);}else{ctx.arc(p.x,p.y,7,0,Math.PI*2);}
     ctx.stroke();ctx.restore();
   });
@@ -1106,7 +1140,7 @@ function drawHomeMarks(theta){
 function drawHistory(theta){
   history.forEach(function(h){
     var p=proj(h.x,.3,h.z,theta);
-    ctx.save();ctx.strokeStyle=h.kind==="hit"?pal.red:pal.ink;ctx.globalAlpha=.65;ctx.lineWidth=2.5;ctx.beginPath();
+    ctx.save();ctx.strokeStyle=h.kind==="hit"?theaterColor(currentFront):pal.ink;ctx.globalAlpha=.42;ctx.lineWidth=2;ctx.beginPath();
     if(h.kind==="hit"){ctx.moveTo(p.x-9,p.y-9);ctx.lineTo(p.x+9,p.y+9);ctx.moveTo(p.x+9,p.y-9);ctx.lineTo(p.x-9,p.y+9);}else{ctx.arc(p.x,p.y,7,0,Math.PI*2);}
     ctx.stroke();ctx.restore();
   });
@@ -1114,7 +1148,7 @@ function drawHistory(theta){
 
 function drawPreview(sol,theta){
   var endT=sol.collision?sol.collision.t:sol.totalT;
-  ctx.save();ctx.strokeStyle=sol.collision?pal.red:pal.ink;ctx.globalAlpha=.36;ctx.lineWidth=2;ctx.setLineDash([7,7]);ctx.beginPath();
+  ctx.save();ctx.strokeStyle=sol.collision?pal.red:theaterColor("west");ctx.globalAlpha=.42;ctx.lineWidth=2.4;ctx.setLineDash([8,7]);ctx.beginPath();
   for(var i=0;i<=90;i++){
     var t=endT*i/90;var q=trajectoryPoint(sol,t);var p=proj(q.x,q.y,q.z,theta);
     if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
@@ -1122,7 +1156,7 @@ function drawPreview(sol,theta){
   ctx.stroke();ctx.restore();
   var retX=Math.max(0,Math.min(100,sol.landX));var retZ=Math.max(0,Math.min(100,sol.landZ));
   line([gun.x,.12,gun.z],[retX,.12,retZ],pal.ink,1.25,theta,[5,7]);
-  drawCircleOnPlane(retX,retZ,4.5,sol.collision?pal.red:pal.ink,theta,true);
+  drawCircleOnPlane(retX,retZ,6.2,sol.collision?pal.red:theaterColor("west"),theta,true);
 }
 
 function incomingPoint(s,t){
@@ -1132,26 +1166,26 @@ function incomingPoint(s,t){
 function drawIncomingShot(now,theta){
   if(!incomingShot)return;
   var q=Math.min(1,(now-incomingShot.startTime)/incomingShot.duration);var p3=incomingPoint(incomingShot,q);var p=proj(p3.x,p3.y,p3.z,theta);
-  ctx.save();ctx.strokeStyle=pal.red;ctx.globalAlpha=.58;ctx.lineWidth=3;ctx.beginPath();var begin=Math.max(0,q-.22);
+  var incomingColor=theaterColor(incomingShot.front);ctx.save();ctx.strokeStyle=incomingColor;ctx.globalAlpha=.72;ctx.lineWidth=4.2;ctx.beginPath();var begin=Math.max(0,q-.24);
   for(var i=0;i<=22;i++){
     var qi=begin+(q-begin)*i/22;var wp=incomingPoint(incomingShot,qi);var sp=proj(wp.x,wp.y,wp.z,theta);
     if(i===0)ctx.moveTo(sp.x,sp.y);else ctx.lineTo(sp.x,sp.y);
   }
-  ctx.stroke();ctx.restore();ctx.fillStyle=pal.red;ctx.beginPath();ctx.arc(p.x,p.y,5.5,0,Math.PI*2);ctx.fill();
+  ctx.stroke();ctx.restore();ctx.save();ctx.fillStyle=incomingColor;ctx.shadowColor=incomingColor;ctx.shadowBlur=10;ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fill();ctx.restore();
   if(q>=1&&!incomingShot.done){incomingShot.done=true;resolveIncoming(incomingShot);}
 }
 
 function drawShot(now,theta){
   if(!shot)return;
   var q=Math.min(1,(now-shot.start)/shot.duration);var t=shot.endT*q;
-  ctx.save();ctx.strokeStyle=pal.red;ctx.globalAlpha=.62;ctx.lineWidth=3;ctx.beginPath();var startQ=Math.max(0,q-.18);
+  ctx.save();ctx.strokeStyle=theaterColor("west");ctx.globalAlpha=.76;ctx.lineWidth=4.5;ctx.beginPath();var startQ=Math.max(0,q-.22);
   for(var i=0;i<=24;i++){
     var qi=startQ+(q-startQ)*i/24;var wp=trajectoryPoint(shot.sol,shot.endT*qi);var sp=proj(wp.x,wp.y,wp.z,theta);
     if(i===0)ctx.moveTo(sp.x,sp.y);else ctx.lineTo(sp.x,sp.y);
   }
   ctx.stroke();ctx.restore();
   if(q>.16&&q<.92&&performance.now()-shellWhooshTimer>180){sfxWhoosh();shellWhooshTimer=performance.now();}
-  var w=trajectoryPoint(shot.sol,t);var p=proj(w.x,w.y,w.z,theta);ctx.fillStyle=pal.red;ctx.beginPath();ctx.arc(p.x,p.y,5.5,0,Math.PI*2);ctx.fill();
+  var w=trajectoryPoint(shot.sol,t);var p=proj(w.x,w.y,w.z,theta);ctx.save();ctx.fillStyle=theaterColor("west");ctx.shadowColor=theaterColor("west");ctx.shadowBlur=10;ctx.beginPath();ctx.arc(p.x,p.y,7.5,0,Math.PI*2);ctx.fill();ctx.restore();
   if(q>=1&&!shot.done){shot.done=true;resolveShot(shot.sol);}
 }
 
