@@ -1,15 +1,29 @@
 # Graph War music sources
 
-Current prototype streaming sources:
+## Menu
 
 - **Synthwave House Loop** — Fupi — CC0
-  - OpenGameArt: https://opengameart.org/content/synthwave-house-loop
-  - Used for the command-terminal main screen.
-- **Calm Loop** — wipics — CC0 / Public Domain
-  - OpenGameArt: https://opengameart.org/content/calm-loop
-  - Temporary playable gameplay fallback while the preferred track is packaged locally.
-- **Exploration Theme** — Cleyton Kauffman — CC0
-  - OpenGameArt: https://opengameart.org/content/exploration-theme
-  - Preferred gameplay anchor. OpenGameArt currently distributes WAV/OGG/FLAC inside a ZIP; bundle a local OGG in a later asset pass rather than pretending the ZIP is directly playable.
+  - https://opengameart.org/content/synthwave-house-loop
 
-The runtime music system keeps music volume independent from combat SFX.
+## Gameplay playlist
+
+- **MindStream** — DST — CC0
+  - https://opengameart.org/content/mindstream
+- **Technological Messup** — Centurion_of_war — CC0
+  - https://opengameart.org/content/technological-messup
+- **Claimed by the Void** — vitalezzz — CC0
+  - https://opengameart.org/content/claimed-by-the-void
+- **Brute Force** — vitalezzz — CC0
+  - https://opengameart.org/content/brute-force
+- **Bilwe** — cinameng / James Gargette — CC0
+  - https://opengameart.org/content/bilwe
+- **Calm Loop** — wipics — CC0 / Public Domain
+  - https://opengameart.org/content/calm-loop
+
+## Preferred future anchor
+
+- **Exploration Theme** — Cleyton Kauffman — CC0
+  - https://opengameart.org/content/exploration-theme
+  - Still the preferred calm anchor once its archive-contained OGG is bundled locally.
+
+The runtime playlist skips a source automatically if a remote audio URL fails and advances to the next track.
